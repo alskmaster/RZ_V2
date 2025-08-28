@@ -8,8 +8,10 @@
     </div>
 
     {% set form_action = url_for('admin.add_client') if action == 'Adicionar' else url_for('admin.edit_client', client_id=client.id) %}
-    <form method="POST" action="{{ form_action }}" enctype="multipart/form-data">
-        
+    <form id="form-cliente" method="POST" action="{{ form_action }}" enctype="multipart/form-data">
+        <!-- CSRF obrigatório para o submit tradicional -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         <div class="card mb-4">
             <div class="card-header">
                 <span class="badge bg-primary me-2">1º</span> Conexão com o Zabbix
@@ -35,7 +37,7 @@
                     </div>
                 </div>
                 <div id="connection-feedback" class="mt-2"></div>
-                <button type="button" id="test-connection-btn" class="btn btn-info">
+                <button type="button" id="test-connection-btn" class="btn btn-info" data-debug="testar-carregar-grupos">
                     <i class="fas fa-plug me-1"></i> Testar e Carregar Grupos
                 </button>
             </div>
@@ -76,7 +78,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <button id="add-group-btn" type="button" class="btn btn-sm btn-outline-secondary mt-2">Adicionar outro Grupo</button>
+                        <button id="add-group-btn" type="button" class="btn btn-sm btn-outline-secondary mt-2" data-debug="adicionar-grupo">Adicionar outro Grupo</button>
                     </div>
 
                     <hr>
@@ -84,9 +86,9 @@
                     <div class="mb-3">
                         <label for="logo" class="form-label">Logo do Cliente</label>
                         <input type="file" id="logo" class="form-control" name="logo" accept=".png,.jpg,.jpeg">
-                         {% if client and client.logo_path %}
-                        <small class="form-text text-muted mt-2 d-block">Atual: 
-                            <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}" height="30" class="bg-light border p-1 rounded">
+                        {% if client and client.logo_path %}
+                        <small class="form-text text-muted mt-2 d-block">Atual:
+                            <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}" height="30" class="bg-light border p-1 rounded" alt="Logo atual">
                         </small>
                         {% endif %}
                     </div>
@@ -95,7 +97,7 @@
         </fieldset>
 
         <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Salvar Cliente</button>
+            <button type="submit" class="btn btn-primary" data-debug="salvar-cliente">Salvar Cliente</button>
             <a href="{{ url_for('admin.list_clients') }}" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
@@ -108,16 +110,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const tenantSection = document.getElementById('tenant-config-section');
     const groupsContainer = document.getElementById('zabbix-groups-container');
     const addGroupBtn = document.getElementById('add-group-btn');
+    const form = document.getElementById('form-cliente');
 
-    // CSRF token para requisições AJAX
+    // CSRF token para requisições AJAX e para logs
     const csrfToken = '{{ csrf_token() }}';
 
+    // ===== DEBUG GLOBAL =====
+    function dbg(msg, extra) {
+        try {
+            console.debug('[CLIENTE][DEBUG]', msg, extra || {});
+        } catch(e) {}
+    }
+
+    // Log de submit (sem impedir o submit tradicional do navegador)
+    form.addEventListener('submit', function() {
+        dbg('Submit formulário /admin/client/add|edit', {
+            action: form.action,
+            hasCsrfField: !!form.querySelector('input[name="csrf_token"]'),
+            name: document.getElementById('name')?.value || null,
+            zabbix_url: document.getElementById('zabbix_url')?.value || null
+        });
+    });
+
+    // ===== Testar Conexão e Carregar Grupos (AJAX) =====
     testBtn.addEventListener('click', async function() {
         const url = document.getElementById('zabbix_url').value;
         const user = document.getElementById('zabbix_user').value;
         const password = document.getElementById('zabbix_password').value;
 
         feedbackDiv.innerHTML = `<div class="alert alert-info">Testando conexão... <span class="spinner-border spinner-border-sm"></span></div>`;
+        dbg('Testar conexão Zabbix: iniciando', { url, userMasked: !!user, passProvided: !!password });
 
         try {
             const response = await fetch('{{ url_for("admin.test_zabbix") }}', {
@@ -133,7 +155,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
             });
 
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                dbg('Resposta não-JSON do test_zabbix', { status: response.status, body: text.slice(0, 300) });
+                throw new Error('Resposta inesperada do servidor.');
+            }
+
             const data = await response.json();
+            dbg('Testar conexão Zabbix: resposta', { ok: response.ok, status: response.status, bodyKeys: Object.keys(data || {}) });
 
             if (data.success) {
                 feedbackDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
@@ -144,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tenantSection.disabled = true;
             }
         } catch (error) {
+            dbg('Erro fetch test_zabbix', { error: String(error) });
             feedbackDiv.innerHTML = `<div class="alert alert-danger">Erro na requisição: ${error}</div>`;
             tenantSection.disabled = true;
         }
@@ -155,18 +186,20 @@ document.addEventListener('DOMContentLoaded', function() {
         while (firstSelect.options.length > 1) {
             firstSelect.remove(1);
         }
-        
+
         groups.forEach(group => {
             const option = new Option(group.name, group.groupid);
             firstSelect.add(option);
         });
 
         // Limpa seletores antigos (caso o teste seja rodado mais de uma vez)
-         while (groupsContainer.children.length > 1) {
+        while (groupsContainer.children.length > 1) {
             groupsContainer.removeChild(groupsContainer.lastChild);
         }
+
+        dbg('populateGroupSelectors', { total: groups?.length || 0 });
     }
-    
+
     // Lógica para adicionar/remover grupos
     function updateRemoveButtons() {
         const groupDivs = groupsContainer.querySelectorAll('.input-group');
@@ -174,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const removeBtn = group.querySelector('.remove-group-btn');
             removeBtn.style.display = groupDivs.length > 1 ? 'block' : 'none';
         });
+        dbg('updateRemoveButtons', { count: groupsContainer.querySelectorAll('.input-group').length });
     }
 
     addGroupBtn.addEventListener('click', function() {
@@ -183,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
             newGroup.querySelector('select').selectedIndex = 0;
             groupsContainer.appendChild(newGroup);
             updateRemoveButtons();
+            dbg('Grupo adicionado');
         }
     });
 
@@ -190,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target && e.target.classList.contains('remove-group-btn')) {
             e.target.closest('.input-group').remove();
             updateRemoveButtons();
+            dbg('Grupo removido');
         }
     });
 

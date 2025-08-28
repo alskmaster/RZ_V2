@@ -2,8 +2,10 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <h1 class="mb-4">{{ title }}</h1>
 <form id="report-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="card">
@@ -40,8 +42,8 @@
                     </div>
                     
                     <div id="interface-options" class="mb-3" style="display: none;">
-                        <label for="interface-selector" class="form-label">Interfaces de Rede</label>
-                        <p class="text-muted small my-1">Segure Ctrl (ou Cmd no Mac) para selecionar várias. Deixe em branco para agregar todas.</p>
+                        <label for="interface-selector" class="form-label">Interfaces de Rede (Opcional)</label>
+                        <p class="text-muted small my-1">Segure <kbd>Ctrl</kbd> (Windows) ou <kbd>Cmd</kbd> (macOS) para selecionar várias. Deixe em branco para agregar todas.</p>
                         <select id="interface-selector" multiple class="form-select" style="height: 120px;"></select>
                     </div>
 
@@ -71,35 +73,35 @@
                     <p class="text-muted">Arraste os módulos para reordenar.</p>
                     <div id="report-layout-container" style="min-height: 200px;">
                         <ul id="report-layout-list" class="list-group list-group-flush">
-                            </ul>
+                            <!-- Itens gerados via JS -->
+                        </ul>
                     </div>
-                     <textarea name="report_layout" id="report_layout_json" class="d-none"></textarea>
+                    <textarea id="report_layout_json" name="report_layout" class="form-control d-none"></textarea>
                 </div>
             </div>
-            
+
             <div class="card mt-4">
-                <div class="card-header">Templates de Layout</div>
+                <div class="card-header">
+                    Templates de Layout
+                </div>
                 <div class="card-body">
-                    <p class="card-text text-muted">Salve seu layout atual ou carregue um template existente para reutilizar.</p>
-                    <div class="d-flex align-items-center mb-3">
-                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-primary" id="saveTemplateBtn" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
                             <i class="bi bi-save"></i> Salvar Layout
                         </button>
-                        <div class="input-group">
-                            <select class="form-select" id="templateSelector">
-                                <option value="">Carregar Template...</option>
-                                {% for template in templates %}
-                                <option value="{{ template.layout_json }}">{{ template.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <button class="btn btn-outline-primary" type="button" id="loadTemplateBtn" disabled>
-                                <i class="bi bi-folder2-open"></i> Carregar
-                            </button>
-                        </div>
+                        <select id="templateSelector" class="form-select" style="max-width: 320px;">
+                            <option value="">Carregar Template...</option>
+                            {% for t in templates %}
+                                <option value='{{ t.layout_json|e }}'>{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-outline-secondary" id="loadTemplateBtn">
+                            Carregar
+                        </button>
                     </div>
                 </div>
             </div>
-            
+
             <div class="d-grid gap-2 mt-4">
                 <button type="submit" id="generate-btn" class="btn btn-primary btn-lg">
                     <i class="bi bi-file-earmark-pdf"></i> Gerar Relatório
@@ -129,35 +131,31 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label for="templateNameInput" class="form-label">Nome do Template:</label>
-                    <input type="text" class="form-control" id="templateNameInput" placeholder="Ex: Relatório Mensal Padrão">
-                </div>
+                <label for="templateNameInput" class="form-label">Nome do Template</label>
+                <input type="text" id="templateNameInput" class="form-control" placeholder="Ex: Template Mensal - LIFETIME">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveTemplateBtn">Salvar</button>
+                <button type="button" class="btn btn-primary" id="confirmSaveTemplateBtn">Salvar</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal: Personalização SLA -->
 <div class="modal fade" id="customizeSlaModal" tabindex="-1" aria-labelledby="customizeSlaModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="customizeSlaModalLabel">Personalizar Módulo de SLA</h5>
+                <h5 class="modal-title" id="customizeSlaModalLabel">Personalizar Módulo: Tabela de Disponibilidade</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h6>Opções de Análise</h6>
-                <div class="form-check mb-3">
+                <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="slaHideSummaryCheck">
-                    <label class="form-check-label" for="slaHideSummaryCheck">
-                        Esconder resumo de disponibilidade
-                    </label>
+                    <label class="form-check-label" for="slaHideSummaryCheck">Ocultar gráfico de barras resumo</label>
                 </div>
-                <div class="form-check mb-3">
+                <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="slaComparePrevMonthCheck">
                     <label class="form-check-label" for="slaComparePrevMonthCheck">
                         Incluir comparação com o mês anterior
@@ -193,24 +191,25 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="slaShowGoalCheck">
                         <label class="form-check-label" for="slaShowGoalCheck">
-                            Meta de SLA (Atingido/Não Atingido)
+                            Meta de SLA
                         </label>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveSlaCustomizationBtn">Salvar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="saveSlaCustomizationBtn">Salvar Personalização</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal: Personalização TOP HOSTS -->
 <div class="modal fade" id="customizeTopHostsModal" tabindex="-1" aria-labelledby="customizeTopHostsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="customizeTopHostsModalLabel">Personalizar Módulo de Top Ofensores</h5>
+                <h5 class="modal-title" id="customizeTopHostsModalLabel">Personalizar Módulo: Diagnóstico dos Ofensores</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -244,8 +243,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveTopHostsCustomizationBtn">Salvar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="saveTopHostsCustomizationBtn">Salvar Personalização</button>
             </div>
         </div>
     </div>

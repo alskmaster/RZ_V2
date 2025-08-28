@@ -2,58 +2,78 @@
 {% block title %}Gerenciar Clientes{% endblock %}
 
 {% block admin_content %}
+<!-- Meta CSRF para uso em JS -->
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
+
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">Gerenciar Clientes</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="{{ url_for('admin.add_client') }}" class="btn btn-sm btn-primary">
-                <i class="fas fa-plus"></i> Novo Cliente
+            <a href="{{ url_for('admin.add_client') }}" class="btn btn-sm btn-primary" id="btn-novo-cliente" data-debug="novo-cliente">
+                <i class="fas fa-plus me-1"></i> Novo Cliente
             </a>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-clientes">
         <div class="card-header">
             Lista de Clientes Cadastrados
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="tabela-clientes">
                     <thead>
                         <tr>
-                            <th style="width: 5%;">Logo</th>
+                            <th style="width: 6rem;">Logo</th>
                             <th>Nome do Cliente</th>
                             <th>Grupos de Hosts Vinculados</th>
-                            <th style="width: 15%;">Ações</th>
+                            <th style="width: 12rem;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for client in clients %}
-                        <tr>
+                        <tr data-client-id="{{ client.id }}">
                             <td>
                                 {% if client.logo_path %}
-                                    <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}" height="30" class="rounded border p-1 bg-light">
+                                    <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}"
+                                         alt="Logo {{ client.name }}" class="bg-light border rounded p-1"
+                                         style="height:40px;max-width:120px;object-fit:contain">
                                 {% else %}
-                                    <span class="text-muted small">N/A</span>
+                                    <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td><strong>{{ client.name }}</strong></td>
+                            <td class="fw-semibold">{{ client.name }}</td>
                             <td>
-                                {% for group in client.zabbix_groups %}
-                                    <span class="badge bg-secondary">{{ group.group_id }}</span>
+                                {% if client.zabbix_groups.count() > 0 %}
+                                    <ul class="mb-0 ps-3">
+                                        {% for g in client.zabbix_groups.all() %}
+                                            <li><code>{{ g.group_id }}</code></li>
+                                        {% endfor %}
+                                    </ul>
                                 {% else %}
-                                    <span class="text-muted small">Nenhum grupo vinculado.</span>
-                                {% endfor %}
+                                    <span class="text-muted">Nenhum grupo vinculado</span>
+                                {% endif %}
                             </td>
                             <td>
-                                <a href="{{ url_for('admin.edit_client', client_id=client.id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('admin.delete_client', client_id=client.id) }}" class="d-inline" onsubmit="return confirm('Atenção: Excluir um cliente também removerá todos os relatórios associados. Deseja continuar?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       href="{{ url_for('admin.edit_client', client_id=client.id) }}"
+                                       title="Editar" data-debug="editar">
+                                        <i class="fas fa-edit me-1"></i> Editar
+                                    </a>
+
+                                    <!-- EXCLUSÃO COM CSRF -->
+                                    <form method="POST"
+                                          action="{{ url_for('admin.delete_client', client_id=client.id) }}"
+                                          class="d-inline-block form-delete-cliente"
+                                          data-client-id="{{ client.id }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                title="Excluir" data-debug="excluir">
+                                            <i class="fas fa-trash-alt me-1"></i> Excluir
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -67,4 +87,34 @@
         </div>
     </div>
 </div>
+
+<script>
+// Debug básico da tela de clientes
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    console.debug('[clients] csrfToken length:', (csrfToken || '').length);
+
+    // Confirmação e log ao excluir
+    document.querySelectorAll('.form-delete-cliente').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            const clientId = form.getAttribute('data-client-id');
+            console.debug('[clients] submit delete form', { clientId, hasHiddenToken: !!form.querySelector('input[name="csrf_token"]') });
+            if (!confirm('Confirma a exclusão deste cliente?')) {
+                e.preventDefault();
+                console.debug('[clients] exclusão cancelada pelo usuário', { clientId });
+                return false;
+            }
+        });
+    });
+
+    // Sinalização de links de edição
+    document.querySelectorAll('[data-debug="editar"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const tr = btn.closest('tr');
+            const clientId = tr ? tr.getAttribute('data-client-id') : null;
+            console.debug('[clients] editar clicked', { clientId });
+        });
+    });
+});
+</script>
 {% endblock %}

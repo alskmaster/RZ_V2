@@ -218,26 +218,42 @@ def get_templates():
 @login_required
 def get_available_modules(client_id):
     client = db.session.get(Client, client_id)
-    if not client or not client.zabbix_groups:
+    # relacionamento é lazy='dynamic' -> use count()/all()
+    if not client or client.zabbix_groups.count() == 0:
+        current_app.logger.debug(f"[get_available_modules] Cliente sem grupos (client_id={client_id})")
         return jsonify({'available_modules': []})
 
-    group_ids = [g.zabbix_group_id for g in client.zabbix_groups]
+    # CORREÇÃO: atributo correto é 'group_id' e precisamos .all() para materializar
+    group_ids = [g.group_id for g in client.zabbix_groups.all()]
     
     config_zabbix, erro = obter_config_e_token_zabbix(current_app.config)
     if erro:
         current_app.logger.error(f"Falha ao obter módulos para client_id {client_id}: {erro}")
         return jsonify({'error': f"Falha ao conectar ao Zabbix: {erro}", 'available_modules': []})
 
-    body = {'jsonrpc': '2.0', 'method': 'host.get', 'params': {'groupids': group_ids, 'output': ['hostid']}, 'auth': config_zabbix['ZABBIX_TOKEN'], 'id': 1}
+    body = {
+        'jsonrpc': '2.0',
+        'method': 'host.get',
+        'params': {'groupids': group_ids, 'output': ['hostid']},
+        'auth': config_zabbix['ZABBIX_TOKEN'],
+        'id': 1
+    }
     hosts = fazer_request_zabbix(body, config_zabbix['ZABBIX_URL'])
     
     if not isinstance(hosts, list) or not hosts:
+        current_app.logger.debug(f"[get_available_modules] Nenhum host retornado para grupos {group_ids}")
         return jsonify({'available_modules': []})
 
     hostids = [h['hostid'] for h in hosts]
     
     def check_key(key):
-        body_item = {'jsonrpc': '2.0', 'method': 'item.get', 'params': {'output': 'itemid', 'hostids': hostids, 'search': {'key_': key}, 'limit': 1}, 'auth': config_zabbix['ZABBIX_TOKEN'], 'id': 1}
+        body_item = {
+            'jsonrpc': '2.0',
+            'method': 'item.get',
+            'params': {'output': 'itemid', 'hostids': hostids, 'search': {'key_': key}, 'limit': 1},
+            'auth': config_zabbix['ZABBIX_TOKEN'],
+            'id': 1
+        }
         items = fazer_request_zabbix(body_item, config_zabbix['ZABBIX_URL'])
         return isinstance(items, list) and len(items) > 0
 
@@ -258,7 +274,7 @@ def get_available_modules(client_id):
     if check_key('system.cpu.util'):
         available_modules.append({'type': 'cpu', 'name': 'Desempenho de CPU'})
     if check_key('vm.memory.size[pused]') or check_key('vm.memory.size[pavailable]'):
-         available_modules.append({'type': 'mem', 'name': 'Desempenho de Memória'})
+        available_modules.append({'type': 'mem', 'name': 'Desempenho de Memória'})
     
     if check_key('vfs.fs.size'):
         available_modules.append({'type': 'disk', 'name': 'Uso de Disco'})
@@ -276,20 +292,30 @@ def get_available_modules(client_id):
 @login_required
 def get_client_interfaces(client_id):
     client = db.session.get(Client, client_id)
-    if not client or not client.zabbix_groups:
+    # relacionamento é lazy='dynamic' -> use count()/all()
+    if not client or client.zabbix_groups.count() == 0:
+        current_app.logger.debug(f"[get_client_interfaces] Cliente sem grupos (client_id={client_id})")
         return jsonify({'interfaces': []})
 
-    group_ids = [g.zabbix_group_id for g in client.zabbix_groups]
+    # CORREÇÃO: atributo correto é 'group_id' e precisamos .all()
+    group_ids = [g.group_id for g in client.zabbix_groups.all()]
     
     config_zabbix, erro = obter_config_e_token_zabbix(current_app.config)
     if erro:
-        current_app.warning(f'Falha ao conectar ao Zabbix ao listar interfaces para o cliente {client_id}: {erro}');
+        current_app.logger.warning(f'Falha ao conectar ao Zabbix ao listar interfaces para o cliente {client_id}: {erro}')
         return jsonify({'interfaces': []})
 
-    body = {'jsonrpc': '2.0', 'method': 'host.get', 'params': {'groupids': group_ids, 'output': ['hostid']}, 'auth': config_zabbix['ZABBIX_TOKEN'], 'id': 1}
+    body = {
+        'jsonrpc': '2.0',
+        'method': 'host.get',
+        'params': {'groupids': group_ids, 'output': ['hostid']},
+        'auth': config_zabbix['ZABBIX_TOKEN'],
+        'id': 1
+    }
     hosts = fazer_request_zabbix(body, config_zabbix['ZABBIX_URL'])
     
     if not isinstance(hosts, list) or not hosts:
+        current_app.logger.debug(f"[get_client_interfaces] Nenhum host retornado para grupos {group_ids}")
         return jsonify({'interfaces': []})
 
     hostids = [h['hostid'] for h in hosts]
@@ -340,7 +366,8 @@ def test_events(client_id, mes_ref):
     if erro:
         return jsonify({"erro": f"Falha ao conectar ao Zabbix: {erro}"}), 500
 
-    group_ids = [g.zabbix_group_id for g in client.zabbix_groups]
+    # CORREÇÃO: 'group_id' + materialização com .all()
+    group_ids = [g.group_id for g in client.zabbix_groups.all()]
     body_hosts = {'jsonrpc': '2.0', 'method': 'host.get', 'params': {'groupids': group_ids, 'output': ['hostid']}, 'auth': config_zabbix['ZABBIX_TOKEN'], 'id': 1}
     hosts = fazer_request_zabbix(body_hosts, config_zabbix['ZABBIX_URL'])
     if not isinstance(hosts, list) or not hosts:

@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.elements.showIp.checked = options.show_ip || false;
                 this.elements.showDowntime.checked = options.show_downtime || false;
                 this.elements.showGoal.checked = options.show_goal || false;
-                
+
                 const isCompareChecked = this.elements.comparePrevMonth.checked;
                 this.elements.showPrevSla.disabled = !isCompareChecked;
                 this.elements.showImprovement.disabled = !isCompareChecked;
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.elements.topN.value = options.top_n || 5;
                 this.elements.showSummary.checked = options.show_summary_chart !== false;
                 this.elements.showDiagnosis.checked = options.show_detailed_diagnosis !== false;
-                this.elements.chartType.value = options.chart_type || 'table'; // Padrão agora é 'table'
+                this.elements.chartType.value = options.chart_type || 'table';
             },
             save: function() {
                 return {
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.dataset.moduleId = module.id;
-            
+
             const moduleName = availableModules.find(m => m.type === module.type)?.name || module.type;
             const titleDisplay = module.title ? `"${module.title}"` : '';
             const isCustomizable = module.type in moduleCustomizers;
@@ -139,12 +139,44 @@ document.addEventListener('DOMContentLoaded', function () {
         moduleTypeSelect.disabled = true;
         addModuleBtn.disabled = true;
 
+        const url = URLS.get_modules.replace('0', String(clientId));
+        console.debug('[gerar_form] GET módulos', { url });
+
         try {
-            const response = await fetch(URLS.get_modules.replace('0', clientId));
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            availableModules = data.available_modules || [];
-            
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' }});
+            const status = response.status;
+            let rawText = '';
+            let data = null;
+
+            if (!response.ok) {
+                try { rawText = await response.text(); } catch (_) {}
+                console.error('[gerar_form] Resposta não-OK ao buscar módulos', { status, rawText });
+                window.__reportModulesDebug = { url, status, rawText };
+                moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
+                return;
+            }
+
+            // Tenta parsear JSON com tolerância
+            try {
+                data = await response.json();
+            } catch (jsonErr) {
+                rawText = rawText || (await response.text().catch(() => ''));
+                console.error('[gerar_form] Falha ao parsear JSON de módulos', { status, jsonErr, rawText });
+                window.__reportModulesDebug = { url, status, jsonErr: String(jsonErr), rawText };
+                moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
+                return;
+            }
+
+            if (data && data.error) {
+                console.error('[gerar_form] Backend retornou erro de módulos', { status, error: data.error });
+                window.__reportModulesDebug = { url, status, error: data.error };
+                moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
+                return;
+            }
+
+            availableModules = (data && data.available_modules) || [];
+            console.debug('[gerar_form] Módulos disponíveis', { count: availableModules.length, items: availableModules });
+
             moduleTypeSelect.innerHTML = '';
             if (availableModules.length > 0) {
                 availableModules.forEach(mod => moduleTypeSelect.add(new Option(mod.name, mod.type)));
@@ -154,8 +186,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 moduleTypeSelect.innerHTML = '<option>Nenhum módulo disponível</option>';
             }
         } catch (error) {
-            console.error("Erro ao carregar módulos:", error);
-            moduleTypeSelect.innerHTML = `<option>Erro ao carregar módulos</option>`;
+            console.error('[gerar_form] Erro ao carregar módulos (network/JS):', error);
+            window.__reportModulesDebug = { url, exception: String(error) };
+            moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
         }
     }
 
@@ -168,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
         generateBtn.disabled = false;
         generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Gerar Relatório';
     }
-    
+
     // --- LÓGICA DE EVENTOS ---
 
     function handleCustomizeClick(module) {
@@ -214,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
     layoutList.addEventListener('click', (e) => {
         const targetBtn = e.target.closest('button');
         if (!targetBtn) return;
-        
+
         const moduleId = targetBtn.dataset.moduleId;
         const module = reportLayout.find(m => m.id === moduleId);
         if (!module) return;
@@ -260,20 +293,20 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Por favor, adicione ao menos um módulo ao layout do relatório.');
             return;
         }
-        
+
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...';
         resetStatusArea();
         statusArea.style.display = 'block';
-        
+
         const formData = new FormData(reportForm);
-        
+
         try {
             const response = await fetch(URLS.gerar_relatorio, {
                 method: 'POST',
                 body: formData
             });
-            if (!response.ok) throw new Error(`Erro no servidor: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Erro no servidor: ${response.status} ${response.statusText}`);
             const data = await response.json();
             const taskId = data.task_id;
 
@@ -283,9 +316,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         const statusResponse = await fetch(URLS.report_status.replace('0', taskId));
                         if (!statusResponse.ok) throw new Error('Falha ao verificar status');
                         const statusData = await statusResponse.json();
-                        
+
                         statusMessage.textContent = statusData.status || 'Aguardando...';
-                        
+
                         if (statusData.status === 'Concluído') {
                             clearInterval(pollInterval);
                             statusMessage.textContent = 'Relatório gerado com sucesso!';
@@ -327,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderLayoutList();
         }
     });
-    
+
     // --- INICIALIZAÇÃO ---
     const today = new Date();
     monthInput.value = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
