@@ -1,0 +1,180 @@
+{% extends 'admin/base.html' %}
+{% block title %}Configurações do Sistema{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card mb-4">
+            <div class="card-header">
+                Customização da Aparência
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.customize_save') }}" enctype="multipart/form-data">
+                
+                <h5 class="mb-3">Configurações Gerais</h5>
+                <div class="mb-3">
+                    <label class="form-label">Nome da Empresa</label>
+                    <input type="text" class="form-control" name="company_name" value="{{ g.sys_config.company_name }}" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Logo para Fundos Escuros (Sidebar)</label>
+                        <input type="file" class="form-control" name="logo_dark" accept=".png,.jpg,.jpeg">
+                        {% if g.sys_config.logo_dark_bg_path %}
+                        <small class="form-text text-muted mt-2 d-block">Atual: 
+                            <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_dark_bg_path) }}" height="30" class="mt-1 bg-dark p-1 rounded">
+                        </small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Logo para Fundos Claros (Login/Tema Claro)</label>
+                        <input type="file" class="form-control" name="logo_light" accept=".png,.jpg,.jpeg">
+                        {% if g.sys_config.logo_light_bg_path %}
+                        <small class="form-text text-muted mt-2 d-block">Atual: 
+                            <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_light_bg_path) }}" height="30" class="mt-1 border p-1 rounded">
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tamanho do Logo na Sidebar (Altura em px)</label>
+                    <input type="number" class="form-control" name="logo_size" value="{{ g.sys_config.logo_size }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Texto do Rodapé</label>
+                    <input type="text" class="form-control" name="footer_text" value="{{ g.sys_config.footer_text|striptags }}">
+                </div>
+                
+                <hr class="my-4">
+                
+                <h5 class="mb-3">Paleta de Cores do Tema</h5>
+                <div class="mb-3">
+                    <label class="form-label">Esquema de Cores (Base)</label>
+                    <select name="color_scheme" id="color_scheme_select" class="form-select">
+                        <option value="dark" {% if g.sys_config.color_scheme == 'dark' %}selected{% endif %}>Tema Escuro</option>
+                        <option value="light" {% if g.sys_config.color_scheme == 'light' %}selected{% endif %}>Tema Claro</option>
+                        <option value="custom" {% if g.sys_config.color_scheme == 'custom' %}selected{% endif %}>Customizado</option>
+                    </select>
+                    <div class="form-text">Escolha um esquema para preencher as cores abaixo ou selecione "Customizado" para salvar suas próprias cores.</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor Primária (Sidebar)</label><input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ g.sys_config.primary_color }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor Secundária (Destaques)</label><input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" value="{{ g.sys_config.secondary_color }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor do Fundo Principal</label><input type="color" class="form-control form-control-color" id="color_bg_main" name="color_bg_main" value="{{ g.sys_config.color_bg_main }}"></div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor dos Cards/Tabelas</label><input type="color" class="form-control form-control-color" id="color_bg_card" name="color_bg_card" value="{{ g.sys_config.color_bg_card }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor do Texto</label><input type="color" class="form-control form-control-color" id="color_text_light" name="color_text_light" value="{{ g.sys_config.color_text_light }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label">Cor das Bordas</label><input type="color" class="form-control form-control-color" id="color_border" name="color_border" value="{{ g.sys_config.color_border }}"></div>
+                </div>
+
+                <hr class="my-4">
+                
+                <h5 class="mb-3">Customização da Tela de Login</h5>
+                <div class="mb-3">
+                    <label class="form-label">Mídia da Tela de Login (Imagem/GIF)</label>
+                    <input type="file" class="form-control" name="login_media" accept=".png,.jpg,.jpeg,.gif">
+                    {% if g.sys_config.login_media_path %}
+                    <small class="form-text text-muted mt-2 d-block">Atual: 
+                        <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.login_media_path) }}" height="50" class="mt-1 border p-1 rounded">
+                    </small>
+                    {% endif %}
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Cor de Fundo da Mídia</label>
+                        <input type="color" class="form-control form-control-color" name="login_media_bg_color" value="{{ g.sys_config.login_media_bg_color }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Modo de Preenchimento da Mídia</label>
+                        <select name="login_media_fill_mode" class="form-select">
+                            <option value="cover" {% if g.sys_config.login_media_fill_mode == 'cover' %}selected{% endif %}>Cobrir</option>
+                            <option value="contain" {% if g.sys_config.login_media_fill_mode == 'contain' %}selected{% endif %}>Conter</option>
+                            <option value="fill" {% if g.sys_config.login_media_fill_mode == 'fill' %}selected{% endif %}>Preencher</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+
+                <h5 class="mb-3">Customização dos Relatórios PDF</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Template da Página de Capa (PDF)</label>
+                        <input type="file" class="form-control" name="report_cover" accept=".pdf">
+                        {% if g.sys_config.report_cover_path %}<small class="form-text text-muted mt-2 d-block">Atual: {{ g.sys_config.report_cover_path }}</small>{% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Template da Página Final (PDF)</label>
+                        <input type="file" class="form-control" name="report_final_page" accept=".pdf">
+                        {% if g.sys_config.report_final_page_path %}<small class="form-text text-muted mt-2 d-block">Atual: {{ g.sys_config.report_final_page_path }}</small>{% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3">Salvar Aparência</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Diagnóstico</div>
+            <div class="card-body">
+                <p>Verifique se as credenciais do Zabbix no arquivo <code>.env</code> estão corretas.</p>
+                <form method="POST" action="{{ url_for('admin.test_zabbix') }}">
+                    <button type="submit" class="btn btn-info">Testar Conexão com Zabbix</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const schemeSelect = document.getElementById('color_scheme_select');
+    const colorPickers = {
+        bg_main: document.getElementById('color_bg_main'),
+        bg_card: document.getElementById('color_bg_card'),
+        text_light: document.getElementById('color_text_light'),
+        border: document.getElementById('color_border')
+    };
+
+    const schemes = {
+        dark: {
+            bg_main: '#2a2f34',
+            bg_card: '#3c424a',
+            text_light: '#e1e2e3',
+            border: '#54595f'
+        },
+        light: {
+            bg_main: '#f8f9fa',
+            bg_card: '#ffffff',
+            text_light: '#212529',
+            border: '#dee2e6'
+        }
+    };
+
+    function applyScheme(schemeName) {
+        if (schemeName === 'custom') return;
+        const selectedScheme = schemes[schemeName];
+        if (selectedScheme) {
+            colorPickers.bg_main.value = selectedScheme.bg_main;
+            colorPickers.bg_card.value = selectedScheme.bg_card;
+            colorPickers.text_light.value = selectedScheme.text_light;
+            colorPickers.border.value = selectedScheme.border;
+        }
+    }
+
+    schemeSelect.addEventListener('change', function() {
+        applyScheme(this.value);
+    });
+
+    Object.values(colorPickers).forEach(picker => {
+        picker.addEventListener('input', function() {
+            schemeSelect.value = 'custom';
+        });
+    });
+});
+</script>
+{% endblock %}

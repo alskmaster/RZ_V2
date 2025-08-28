@@ -1,0 +1,41 @@
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+    <h2>{{ title or 'Painel de Vilões Sistêmicos' }}</h2>
+
+    {# Seção 1: Gráfico Principal de Problemas Sistêmicos #}
+    <div class="chart-container" style="page-break-inside: avoid; margin-bottom: 25px;">
+        {% if data.grafico %}
+            <img src="data:image/png;base64,{{ data.grafico }}" style="width: 100%; height: auto;">
+        {% else %}
+            <p><i>Nenhum incidente registrado no período.</i></p>
+        {% endif %}
+    </div>
+
+    {# Seção 2: Tabela de Drill-Down do Principal Vilão (só aparece se houver dados) #}
+    {% if data.drilldown_data and data.drilldown_data.hosts_table %}
+        <div class="drilldown-container" style="page-break-inside: avoid;">
+            <h4 style="font-size: 11pt; color: #333; margin-bottom: 10px;">
+                Diagnóstico do Principal Vilão: "{{ data.drilldown_data.villain_name }}"
+            </h4>
+            <p style="font-size: 9pt; color: #555; margin-top: -5px; margin-bottom: 10px;">
+                A tabela abaixo mostra os hosts que mais sofreram com este problema específico.
+            </p>
+            <table class="table" style="font-size: 8pt;">
+                <thead>
+                    <tr>
+                        <th>Host Mais Afetado</th>
+                        <th style="width: 30%;">Ocorrências (deste problema)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for host_info in data.drilldown_data.hosts_table %}
+                    <tr>
+                        <td>{{ host_info.Host }}</td>
+                        <td>{{ host_info.Ocorrências }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+</div>

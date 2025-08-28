@@ -1,0 +1,7 @@
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+    <h2 class="first">{{ title or 'Análise de Disponibilidade (SLA)' }}</h2>
+    {{ data.summary_html|safe }}
+    <div class="table-responsive">
+        {{ data.tabela_sla_problemas|safe }}
+    </div>
+</div>

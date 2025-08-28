@@ -1,0 +1,79 @@
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+    <h2>{{ title or 'Diagnóstico dos Principais Ofensores' }}</h2>
+
+    {% if not data.ofensores and not data.summary_chart %}
+        <p style="padding: 20px; text-align: center; color: #555; background-color: #f0f0f0; border-radius: 5px;">
+            <i>Nenhum host com indisponibilidade registrada no período.</i>
+        </p>
+    {% else %}
+
+        {# Seção 1: Gráfico Resumo (Controlado pelo Modal) #}
+        {% if data.custom_options.show_summary_chart != false %}
+            <div class="summary-chart-container" style="page-break-inside: avoid; margin-bottom: 25px; width: 100%;">
+                {% if data.summary_chart %}
+                    <img src="data:image/png;base64,{{ data.summary_chart }}" style="width: 100%; height: auto;">
+                {% else %}
+                    <p><i>Gráfico de resumo indisponível.</i></p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {# Seção 2: Diagnóstico Detalhado (Controlado pelo Modal) #}
+        {% if data.custom_options.show_detailed_diagnosis != false %}
+             <h4 style="font-size: 11pt; color: #333; margin-top: 25px; border-top: 1px solid #ddd; padding-top: 15px;">Diagnóstico Individual dos Ofensores do Mês Atual</h4>
+            {% for ofensor in data.ofensores %}
+                <div class="ofensor-card" style="page-break-inside: avoid; margin-bottom: 25px; border: 1px solid #e0e0e0; border-radius: 5px; padding: 15px; background-color: #f9f9f9;">
+                    
+                    <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 14pt; color: #c62828; border-bottom: 1px solid #e0e0e0; padding-bottom: 5px;">
+                        🖥️ {{ ofensor.name }}
+                    </h3>
+                    
+                    <table class="table" style="font-size: 8pt; margin-bottom: 15px; table-layout: fixed; width: 100%;">
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="width: 60%;">Métrica</th>
+                            <th style="width: 40%;">Valor</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Tempo Indisponível (Mês Atual)</strong></td>
+                            <td>{{ ofensor.downtime_str }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nº Total de Incidentes (Todos os Tipos)</strong></td>
+                            <td>{{ ofensor.total_incidents }}</td>
+                        </tr>
+                    </table>
+
+                    <h5 style="font-size: 10pt; color: #333; margin-bottom: 10px;">Breakdown de Causa Raiz (por frequência):</h5>
+                    
+                    {% set chart_type = data.custom_options.chart_type or 'table' %}
+
+                    {% if (chart_type == 'pie' or chart_type == 'bar') and ofensor.breakdown_chart %}
+                        <div class="breakdown-chart" style="text-align: center;">
+                             <img src="data:image/png;base64,{{ ofensor.breakdown_chart }}" style="max-width: 100%; height: auto;">
+                        </div>
+
+                    {% elif chart_type == 'table' %}
+                        <table class="table" style="font-size: 8pt;">
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Incidente</th>
+                                    <th style="width: 25%;">Ocorrências</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for problema, ocorrencias in ofensor.breakdown.items() %}
+                                <tr>
+                                    <td>{{ problema }}</td>
+                                    <td>{{ ocorrencias }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p style="font-size: 9pt; color: #777; font-style: italic;">Nenhum incidente detalhado encontrado para este host.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+</div>

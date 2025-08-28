@@ -1,0 +1,18 @@
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+    <h2>{{ title }}</h2>
+    <div class="chart-container">
+        {% if data.grafico %}<img src="data:image/png;base64,{{ data.grafico }}">
+        {% else %}<p><i>Gráfico de Tráfego indisponível.</i></p>{% endif %}
+    </div>
+    {{ data.tabela | safe }}
+</div>
+{% if data and data.grafico %}
+<div class="mb-3">{{ data.grafico|safe }}</div>
+{% elif grafico %}
+<div class="mb-3">{{ grafico|safe }}</div>
+{% endif %}
+{% if data and data.tabela %}
+<div class="table-responsive">{{ data.tabela|safe }}</div>
+{% elif tabela %}
+<div class="table-responsive">{{ tabela|safe }}</div>
+{% endif %}

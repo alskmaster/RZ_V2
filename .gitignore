@@ -1,0 +1,10 @@
+*.env
+*.temp.py
+.venv
+.vscode/
+__pycache__
+*.csv
+files/*.pdf
+relatorios_gerados/*.pdf
+tmp/
+assets/saida/

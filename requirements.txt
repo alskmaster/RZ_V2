@@ -1,0 +1,12 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-APScheduler
+Flask-Mail
+python-dotenv
+requests
+pandas
+matplotlib
+xhtml2pdf
+PyPDF2
+imgkit

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav class="navbar navbar-expand-lg top-navbar mb-4">
+<div class="container-fluid">
+    <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {% if 'user' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.users') }}">Usuários</a></li>
+        <li class="nav-item"><a class="nav-link {% if 'client' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.clients') }}">Clientes</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin.vincular' %}active{% endif %}" href="{{ url_for('admin.vincular') }}">Vínculos</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin.customize' %}active{% endif %}" href="{{ url_for('admin.customize') }}">Configurações</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin.audit_log' %}active{% endif %}" href="{{ url_for('admin.audit_log') }}">Auditoria</a></li>
+    </ul>
+</div>
+</nav>
+
+{% block admin_content %}{% endblock %}
+
+{% endblock %}

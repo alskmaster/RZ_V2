@@ -1,0 +1,12 @@
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+    <h2>{{ title or 'Eletrocardiograma do Ambiente (Incidentes por Dia)' }}</h2>
+    <div class="chart-container">
+        {% if data.grafico %}
+            <img src="data:image/png;base64,{{ data.grafico }}" style="width: 100%; height: auto;">
+        {% else %}
+            <p style="padding: 20px; text-align: center; color: #555; background-color: #f0f0f0; border-radius: 5px;">
+                <i>Nenhum incidente registrado no período para gerar a linha do tempo.</i>
+            </p>
+        {% endif %}
+    </div>
+</div>

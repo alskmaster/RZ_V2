@@ -1,0 +1,7 @@
+/* app/static/css/style.css (ou dentro de um <style> no base.html) */
+.table-responsive .sla-host-cell {
+    max-width: 200px; /* Ajuste este valor conforme a necessidade */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
