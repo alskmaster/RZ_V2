@@ -1,0 +1,70 @@
+{% extends 'admin/base.html' %}
+{% block title %}{{ action }} Perfil de Métrica{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <h1 class="mt-4">{{ action }} Perfil de Métrica</h1>
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-key mr-1"></i>
+            Dados do Perfil de Métrica
+        </div>
+        <div class="card-body">
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{ form.metric_type.label(class="form-label") }}
+                    {{ form.metric_type(class="form-select" + (" is-invalid" if form.metric_type.errors else "")) }}
+                    {% for error in form.metric_type.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.key_string.label(class="form-label") }}
+                    {{ form.key_string(class="form-control" + (" is-invalid" if form.key_string.errors else ""), placeholder="Ex: vm.memory.size[pused]") }}
+                    {% for error in form.key_string.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.priority.label(class="form-label") }}
+                        {{ form.priority(class="form-control" + (" is-invalid" if form.priority.errors else "")) }}
+                        <small class="form-text text-muted">Use 1 para a maior prioridade.</small>
+                        {% for error in form.priority.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.calculation_type.label(class="form-label") }}
+                        {{ form.calculation_type(class="form-select" + (" is-invalid" if form.calculation_type.errors else "")) }}
+                        <small class="form-text text-muted">'direct' = usa o valor. 'inverse' = 100 - valor.</small>
+                        {% for error in form.calculation_type.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=3, placeholder="Ex: % de memória usada em servidores Linux") }}
+                </div>
+                
+                <div class="mb-3 form-check">
+                    {{ form.is_active(class="form-check-input") }}
+                    {{ form.is_active.label(class="form-check-label") }}
+                </div>
+                
+                <hr>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <a href="{{ url_for('admin.list_metric_keys') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

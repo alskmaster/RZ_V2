@@ -3,6 +3,7 @@ Flask-SQLAlchemy
 Flask-Login
 Flask-APScheduler
 Flask-Mail
+Flask-WTF
 python-dotenv
 requests
 pandas

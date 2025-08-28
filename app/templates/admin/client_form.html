@@ -1,78 +1,192 @@
 {% extends 'admin/base.html' %}
-{% block title %}{{ 'Adicionar' if not client else 'Editar' }} Cliente{% endblock %}
+{% block title %}{{ action }} Cliente{% endblock %}
+
 {% block admin_content %}
-<div class="row justify-content-center"><div class="col-lg-8"><div class="card">
-<div class="card-header">{{ 'Adicionar Cliente' if not client else 'Editar Cliente' }}</div>
-<div class="card-body"><form method="POST" enctype="multipart/form-data">
-    <div class="mb-3"><label class="form-label">Nome do Cliente</label>
-    <input type="text" class="form-control" name="name" value="{{ client.name if client else '' }}" required></div>
-
-    <div id="zabbix-groups-container">
-        <label class="form-label">Grupos Zabbix</label>
-        {% if client and client.zabbix_groups %}
-            {% for group in client.zabbix_groups %}
-            <div class="input-group mb-2">
-                <select class="form-select" name="zabbix_group_ids" required>
-                    <option value="">Selecione um Grupo Zabbix</option>
-                    {% for zabbix_group in zabbix_groups %}
-                        <option value="{{ zabbix_group.groupid }}" {% if zabbix_group.groupid == group.zabbix_group_id %}selected{% endif %}>
-                            {{ zabbix_group.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-outline-danger remove-group-btn" type="button">Remover</button>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="input-group mb-2">
-                <select class="form-select" name="zabbix_group_ids" required>
-                    <option value="">Selecione um Grupo Zabbix</option>
-                    {% for zabbix_group in zabbix_groups %}
-                        <option value="{{ zabbix_group.groupid }}">{{ zabbix_group.name }}</option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-outline-danger remove-group-btn" type="button" style="display: none;">Remover</button>
-            </div>
-        {% endif %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ action }} Cliente</h1>
     </div>
-    <button type="button" id="add-group-btn" class="btn btn-sm btn-outline-secondary mb-3">Adicionar outro Grupo</button>
 
-    <div class="mb-3"><label class="form-label">SLA Contratado (%)</label>
-    <input type="number" step="0.01" class="form-control" name="sla_contract" value="{{ client.sla_contract if client else '99.9' }}" required></div>
+    {% set form_action = url_for('admin.add_client') if action == 'Adicionar' else url_for('admin.edit_client', client_id=client.id) %}
+    <form method="POST" action="{{ form_action }}" enctype="multipart/form-data">
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <span class="badge bg-primary me-2">1º</span> Conexão com o Zabbix
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="name" class="form-label">Nome do Cliente</label>
+                        <input type="text" id="name" class="form-control" name="name" value="{{ client.name if client else '' }}" required>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="zabbix_url" class="form-label">URL da API Zabbix</label>
+                        <input type="url" id="zabbix_url" class="form-control" name="zabbix_url" value="{{ client.zabbix_url if client else '' }}" placeholder="http://zabbix.example.com/api_jsonrpc.php" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="zabbix_user" class="form-label">Usuário Zabbix</label>
+                        <input type="text" id="zabbix_user" class="form-control" name="zabbix_user" value="{{ client.zabbix_user if client else '' }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="zabbix_password" class="form-label">Senha Zabbix</label>
+                        <input type="password" id="zabbix_password" class="form-control" name="zabbix_password">
+                        {% if client %}<small class="form-text text-muted">Deixe em branco para não alterar.</small>{% endif %}
+                    </div>
+                </div>
+                <div id="connection-feedback" class="mt-2"></div>
+                <button type="button" id="test-connection-btn" class="btn btn-info">
+                    <i class="fas fa-plug me-1"></i> Testar e Carregar Grupos
+                </button>
+            </div>
+        </div>
 
-    <div class="mb-3"><label class="form-label">Logo do Cliente</label><input type="file" class="form-control" name="logo" accept=".png,.jpg,.jpeg">
-    {% if client and client.logo_path %}<small class="form-text text-muted">Atual: <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}" height="30" class="mt-1 border p-1 rounded"></small>{% endif %}</div>
+        <fieldset id="tenant-config-section" {% if action == 'Adicionar' %}disabled{% endif %}>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <span class="badge bg-primary me-2">2º</span> Configurações do Tenant
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Grupos de Hosts do Zabbix</label>
+                        <div id="zabbix-groups-container">
+                            {% if zabbix_groups_selecionados %}
+                                {% for selected_group_id in zabbix_groups_selecionados %}
+                                <div class="input-group mb-2">
+                                    <select class="form-select" name="zabbix_groups[]">
+                                        <option value="">Selecione um grupo...</option>
+                                        {% for group in zabbix_groups %}
+                                            <option value="{{ group.groupid }}" {% if group.groupid == selected_group_id %}selected{% endif %}>
+                                                {{ group.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-danger remove-group-btn" type="button">Remover</button>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="input-group mb-2">
+                                    <select class="form-select" name="zabbix_groups[]">
+                                        <option value="">Selecione um grupo...</option>
+                                         {% for group in zabbix_groups %}
+                                            <option value="{{ group.groupid }}">{{ group.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-danger remove-group-btn" type="button" style="display: none;">Remover</button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button id="add-group-btn" type="button" class="btn btn-sm btn-outline-secondary mt-2">Adicionar outro Grupo</button>
+                    </div>
 
-    <button type="submit" class="btn btn-primary">Salvar</button>
-    <a href="{{ url_for('admin.clients') }}" class="btn btn-secondary">Cancelar</a>
-</form></div></div></div></div>
+                    <hr>
+                    <h5 class="mb-3">Branding</h5>
+                    <div class="mb-3">
+                        <label for="logo" class="form-label">Logo do Cliente</label>
+                        <input type="file" id="logo" class="form-control" name="logo" accept=".png,.jpg,.jpeg">
+                         {% if client and client.logo_path %}
+                        <small class="form-text text-muted mt-2 d-block">Atual: 
+                            <img src="{{ url_for('main.uploaded_file', filename=client.logo_path) }}" height="30" class="bg-light border p-1 rounded">
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Salvar Cliente</button>
+            <a href="{{ url_for('admin.list_clients') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const container = document.getElementById('zabbix-groups-container');
-    const addBtn = document.getElementById('add-group-btn');
+    const testBtn = document.getElementById('test-connection-btn');
+    const feedbackDiv = document.getElementById('connection-feedback');
+    const tenantSection = document.getElementById('tenant-config-section');
+    const groupsContainer = document.getElementById('zabbix-groups-container');
+    const addGroupBtn = document.getElementById('add-group-btn');
 
-    const groupSelectTemplate = container.querySelector('.input-group').cloneNode(true);
-    groupSelectTemplate.querySelector('select').selectedIndex = 0;
+    // CSRF token para requisições AJAX
+    const csrfToken = '{{ csrf_token() }}';
 
-    function updateRemoveButtons() {
-        const groups = container.querySelectorAll('.input-group');
-        groups.forEach((group, index) => {
-            const removeBtn = group.querySelector('.remove-group-btn');
-            if (groups.length > 1) {
-                removeBtn.style.display = 'block';
+    testBtn.addEventListener('click', async function() {
+        const url = document.getElementById('zabbix_url').value;
+        const user = document.getElementById('zabbix_user').value;
+        const password = document.getElementById('zabbix_password').value;
+
+        feedbackDiv.innerHTML = `<div class="alert alert-info">Testando conexão... <span class="spinner-border spinner-border-sm"></span></div>`;
+
+        try {
+            const response = await fetch('{{ url_for("admin.test_zabbix") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    zabbix_url: url,
+                    zabbix_user: user,
+                    zabbix_password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                feedbackDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                tenantSection.disabled = false;
+                populateGroupSelectors(data.groups);
             } else {
-                removeBtn.style.display = 'none';
+                feedbackDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                tenantSection.disabled = true;
             }
+        } catch (error) {
+            feedbackDiv.innerHTML = `<div class="alert alert-danger">Erro na requisição: ${error}</div>`;
+            tenantSection.disabled = true;
+        }
+    });
+
+    function populateGroupSelectors(groups) {
+        const firstSelect = groupsContainer.querySelector('select');
+        // Limpa opções existentes, exceto a primeira ("Selecione...")
+        while (firstSelect.options.length > 1) {
+            firstSelect.remove(1);
+        }
+        
+        groups.forEach(group => {
+            const option = new Option(group.name, group.groupid);
+            firstSelect.add(option);
+        });
+
+        // Limpa seletores antigos (caso o teste seja rodado mais de uma vez)
+         while (groupsContainer.children.length > 1) {
+            groupsContainer.removeChild(groupsContainer.lastChild);
+        }
+    }
+    
+    // Lógica para adicionar/remover grupos
+    function updateRemoveButtons() {
+        const groupDivs = groupsContainer.querySelectorAll('.input-group');
+        groupDivs.forEach((group) => {
+            const removeBtn = group.querySelector('.remove-group-btn');
+            removeBtn.style.display = groupDivs.length > 1 ? 'block' : 'none';
         });
     }
 
-    addBtn.addEventListener('click', function() {
-        container.appendChild(groupSelectTemplate.cloneNode(true));
-        updateRemoveButtons();
+    addGroupBtn.addEventListener('click', function() {
+        const firstSelectGroup = groupsContainer.querySelector('.input-group');
+        if (firstSelectGroup) {
+            const newGroup = firstSelectGroup.cloneNode(true);
+            newGroup.querySelector('select').selectedIndex = 0;
+            groupsContainer.appendChild(newGroup);
+            updateRemoveButtons();
+        }
     });
 
-    container.addEventListener('click', function(e) {
+    groupsContainer.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('remove-group-btn')) {
             e.target.closest('.input-group').remove();
             updateRemoveButtons();

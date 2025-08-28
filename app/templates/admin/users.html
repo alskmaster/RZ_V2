@@ -1,24 +1,69 @@
 {% extends 'admin/base.html' %}
 {% block title %}Gerenciar Usuários{% endblock %}
+
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Gerenciar Usuários</h1>
-    <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Usuário</a>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Gerenciar Usuários</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('admin.add_user') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Novo Usuário
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Lista de Usuários Cadastrados
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Função</th>
+                            <th style="width: 20%;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                {% if user.role.name == 'Admin' %}
+                                    <span class="badge bg-warning text-dark">{{ user.role.name }}</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ user.role.name }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin.vincular_cliente_usuario', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" title="Vincular Clientes">
+                                    <i class="fas fa-link"></i>
+                                </a>
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir o usuário {{ user.username }}?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted p-4">Nenhum usuário cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
-<div class="card"><div class="card-body"><div class="table-responsive">
-<table class="table table-hover align-middle">
-<thead><tr><th>Usuário</th><th>Função</th><th>Ações</th></tr></thead>
-<tbody>
-{% for user in users %}
-<tr><td>{{ user.username }}</td>
-<td>{% if user.has_role('super_admin') %}<span class="badge bg-danger">Super Admin</span>
-{% elif user.has_role('admin') %}<span class="badge bg-warning text-dark">Admin</span>
-{% else %}<span class="badge bg-info">Cliente</span>{% endif %}</td>
-<td>
-<a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
-{% if user.id != current_user.id %}
-<form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir o usuário {{ user.username }}?');">
-<button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button></form>
-{% endif %}</td></tr>
-{% endfor %}</tbody></table></div></div></div>
 {% endblock %}

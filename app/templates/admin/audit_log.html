@@ -1,14 +1,42 @@
 {% extends 'admin/base.html' %}
 {% block title %}Log de Auditoria{% endblock %}
+
 {% block admin_content %}
-<div class="card"><div class="card-header">Log de Auditoria</div>
-<div class="card-body"><div class="table-responsive">
-<table class="table table-sm table-hover">
-<thead><tr><th>Data/Hora (UTC)</th><th>Usuário</th><th>Ação</th></tr></thead>
-<tbody>
-{% for log in logs %}
-<tr><td>{{ log.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}</td><td>{{ log.username }}</td><td>{{ log.action }}</td></tr>
-{% else %}
-<tr><td colspan="3" class="text-center text-muted p-4">Nenhum registro de auditoria encontrado.</td></tr>
-{% endfor %}</tbody></table></div></div></div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Log de Auditoria</h1>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Registros das últimas ações no sistema
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Data/Hora (UTC)</th>
+                            <th style="width: 15%;">Usuário</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                            <td>{{ log.username }}</td>
+                            <td>{{ log.action }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted p-4">Nenhum registro de auditoria encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

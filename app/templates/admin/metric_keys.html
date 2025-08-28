@@ -1,0 +1,71 @@
+{% extends 'admin/base.html' %}
+{% block title %}Perfis de Coleta de Métricas{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Perfis de Coleta de Métricas</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('admin.add_metric_key') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Nova Chave
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Chaves de Coleta Cadastradas
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure aqui as chaves (keys) que o sistema deve procurar no Zabbix para cada tipo de métrica. A menor prioridade será tentada primeiro.</p>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Chave Zabbix</th>
+                            <th>Prioridade</th>
+                            <th>Cálculo</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th style="width: 15%;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in keys %}
+                        <tr>
+                            <td><span class="badge bg-info">{{ key.metric_type }}</span></td>
+                            <td><code>{{ key.key_string }}</code></td>
+                            <td>{{ key.priority }}</td>
+                            <td><span class="badge bg-light text-dark">{{ key.calculation_type.value }}</span></td>
+                            <td>{{ key.description or '-' }}</td>
+                            <td>
+                                {% if key.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin.edit_metric_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('admin.delete_metric_key', key_id=key.id) }}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta chave?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted p-4">Nenhum perfil de métrica cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
