@@ -26,6 +26,7 @@
                         <tr>
                             <th style="width: 6rem;">Logo</th>
                             <th>Nome do Cliente</th>
+                            <th>SLA (%)</th>
                             <th>Grupos de Hosts Vinculados</th>
                             <th style="width: 12rem;">Ações</th>
                         </tr>
@@ -43,6 +44,13 @@
                                 {% endif %}
                             </td>
                             <td class="fw-semibold">{{ client.name }}</td>
+                            <td>
+                                {% if client.sla_contract is not none %}
+                                    {{ ('%.3f' % client.sla_contract).rstrip('0').rstrip('.') }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if client.zabbix_groups.count() > 0 %}
                                     <ul class="mb-0 ps-3">
@@ -78,7 +86,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted p-4">Nenhum cliente cadastrado.</td>
+                            <td colspan="5" class="text-center text-muted p-4">Nenhum cliente cadastrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

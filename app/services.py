@@ -92,6 +92,50 @@ class ReportGenerator:
     def _update_status(self, message):
         update_status(self.task_id, message)
 
+    # -------------------- SLA Helper (resiliente) --------------------
+    def _get_client_sla_contract(self):
+        """
+        Tenta obter a meta de SLA do cliente de forma resiliente.
+        - Procura por atributos comuns no objeto Client (futuro-compatível).
+        - Caso não exista, tenta fallback em system_config (chave DEFAULT_SLA_CONTRACT se disponível).
+        - Se nada for encontrado, retorna None e loga aviso.
+        """
+        try:
+            current_app.logger.debug(f"[ReportGenerator] Buscando SLA do cliente id={getattr(self.client, 'id', 'N/A')}")
+            for attr in ("sla_contract", "sla", "sla_policy", "sla_plan", "sla_goal"):
+                val = getattr(self.client, attr, None)
+                if val is not None:
+                    try:
+                        fval = float(val)
+                        current_app.logger.debug(f"[ReportGenerator] SLA encontrado em Client.{attr} = {fval}")
+                        return fval
+                    except Exception:
+                        current_app.logger.debug(f"[ReportGenerator] SLA encontrado em Client.{attr} (não numérico): {val}")
+                        return val
+        except Exception as e:
+            current_app.logger.warning(f"[ReportGenerator] Falha ao inspecionar SLA no Client: {e}", exc_info=True)
+
+        # Fallback: system_config pode ser objeto ORM ou dict
+        fallback = None
+        try:
+            if isinstance(self.system_config, dict):
+                fallback = self.system_config.get("DEFAULT_SLA_CONTRACT")
+            else:
+                fallback = getattr(self.system_config, "DEFAULT_SLA_CONTRACT", None)
+        except Exception as e:
+            current_app.logger.debug(f"[ReportGenerator] Erro ao consultar fallback de SLA em system_config: {e}")
+
+        if fallback is not None:
+            current_app.logger.debug(f"[ReportGenerator] Usando fallback DEFAULT_SLA_CONTRACT = {fallback}")
+            try:
+                return float(fallback)
+            except Exception:
+                return fallback
+
+        current_app.logger.warning("[ReportGenerator] Nenhuma meta de SLA definida para o cliente; prosseguindo sem meta.")
+        return None
+    # ----------------------------------------------------------------
+
     def generate(self, client, ref_month_str, system_config, author, report_layout_json):
         """Gera o relatório com base no layout configurado (JSON)."""
         self.client = client
@@ -148,7 +192,8 @@ class ReportGenerator:
         # Pré-coleta de disponibilidade (SLA/KPI/Top)
         if any(mod.get('type') in availability_module_types for mod in (report_layout or [])):
             self._update_status("Coletando dados de Disponibilidade (SLA)…")
-            availability_data_cache, error_msg = self._collect_availability_data(all_hosts, period, self.client.sla_contract)
+            sla_contract = self._get_client_sla_contract()
+            availability_data_cache, error_msg = self._collect_availability_data(all_hosts, period, sla_contract)
             if error_msg:
                 current_app.logger.warning(f"[ReportGenerator.generate] Erro SLA primário: {error_msg}")
                 final_html_parts.append(f"<p>Erro crítico ao coletar dados de disponibilidade: {error_msg}</p>")
@@ -165,7 +210,8 @@ class ReportGenerator:
                 prev_month_end = (prev_month_start.replace(day=28) + dt.timedelta(days=4)).replace(day=1) - dt.timedelta(seconds=1)
                 prev_period = {'start': int(prev_month_start.timestamp()), 'end': int(prev_month_end.timestamp())}
 
-                prev_data, prev_error = self._collect_availability_data(all_hosts, prev_period, self.client.sla_contract, trends_only=True)
+                sla_contract = self._get_client_sla_contract()
+                prev_data, prev_error = self._collect_availability_data(all_hosts, prev_period, sla_contract, trends_only=True)
                 if prev_error:
                     self._update_status(f"Aviso: Falha ao coletar dados do mês anterior: {prev_error}")
                 elif prev_data and 'df_sla_problems' in prev_data:
@@ -242,6 +288,9 @@ class ReportGenerator:
     # -------------------- Bloco de coleta / utilidades --------------------
 
     def _collect_availability_data(self, all_hosts, period, sla_goal, trends_only=False):
+        if sla_goal is None:
+            current_app.logger.debug("[Availability] Nenhuma meta de SLA definida; calculando disponibilidade sem metas.")
+
         all_host_ids = [h['hostid'] for h in all_hosts]
 
         ping_items = self.get_items(all_host_ids, 'icmpping', search_by_key=True)
@@ -323,12 +372,20 @@ class ReportGenerator:
         elif len(all_problems) > prev_all_problems_count:
             incidents_trend = 'down'
 
+        # KPI principal com/sem meta de SLA
+        if sla_goal is not None:
+            sublabel = f"Meta: {f'{float(sla_goal):.2f}'.replace('.', ',')}%"
+            status = "atingido" if avg_sla >= float(sla_goal) else "nao-atingido"
+        else:
+            sublabel = "Meta: não definida"
+            status = "indefinido"
+
         kpis_data = [
             {
                 'label': f"Média de SLA ({len(hosts_for_sla)} Hosts)",
                 'value': f"{avg_sla:.2f}".replace('.', ',') + '%',
-                'sublabel': f"Meta: {f'{sla_goal:.2f}'.replace('.', ',')}%",
-                'status': "atingido" if avg_sla >= sla_goal else "nao-atingido",
+                'sublabel': sublabel,
+                'status': status,
                 'trend': sla_trend
             },
             {

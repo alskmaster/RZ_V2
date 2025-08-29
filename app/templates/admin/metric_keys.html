@@ -7,7 +7,7 @@
         <h1 class="h2">Perfis de Coleta de Métricas</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ url_for('admin.add_metric_key') }}" class="btn btn-sm btn-primary">
-                <i class="fas fa-plus"></i> Nova Chave
+                <i class="fas fa-plus me-1"></i> Nova Chave
             </a>
         </div>
     </div>
@@ -47,16 +47,17 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{{ url_for('admin.edit_metric_key', key_id=key.id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ url_for('admin.delete_metric_key', key_id=key.id) }}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta chave?');">
-                                    {# Campo oculto CSRF obrigatório #}
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('admin.edit_metric_key', key_id=key.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar">
+                                        <i class="fas fa-edit me-1"></i> Editar
+                                    </a>
+                                    <form action="{{ url_for('admin.delete_metric_key', key_id=key.id) }}" method="post" class="d-inline form-delete-metric-key" data-key-id="{{ key.id }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="fas fa-trash-alt me-1"></i> Excluir
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -70,4 +71,19 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.form-delete-metric-key').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            const keyId = form.getAttribute('data-key-id');
+            if (!confirm('Confirma a exclusão desta chave?')) {
+                e.preventDefault();
+                console.debug('[metric_keys] exclusão cancelada', { keyId });
+                return false;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

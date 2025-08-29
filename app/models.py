@@ -44,6 +44,10 @@ class Client(db.Model):
     zabbix_url = db.Column(db.String(255), nullable=False)
     zabbix_user = db.Column(db.String(100), nullable=False)
     zabbix_password = db.Column(db.String(255), nullable=False)
+
+    # === (Reintroduzido) Meta de SLA por cliente ===
+    sla_contract = db.Column(db.Float, nullable=False, default=99.9)
+
     logo_path = db.Column(db.String(255))
     reports = db.relationship('Report', backref='client', lazy='dynamic')
     users = db.relationship('User', secondary=user_client_association, back_populates='clients')
@@ -52,11 +56,21 @@ class Client(db.Model):
 
 
 # --- MODELO CORRIGIDO/ADICIONADO ---
-# Adicionando a classe ClientZabbixGroup que estava faltando
 class ClientZabbixGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+
+    # Coluna real utilizada atualmente
     group_id = db.Column(db.String(50), nullable=False)
+
+    # --- Alias para compatibilidade com backups/views antigas ---
+    @property
+    def zabbix_group_id(self):
+        return self.group_id
+
+    @zabbix_group_id.setter
+    def zabbix_group_id(self, value):
+        self.group_id = value
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

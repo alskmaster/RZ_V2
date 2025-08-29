@@ -22,7 +22,7 @@
                 <td>{{ report.client.name }}</td>
                 <td>{{ report.reference_month }}</td>
                 <td><span class="badge bg-secondary">{{ report.report_type.replace('_', ' ')|title }}</span></td>
-                <td>{{ report.author.username }}</td>
+                <td>{{ report.user.username }}</td>
                 <td>{{ report.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>
                     <a href="{{ url_for('main.download_report', report_id=report.id) }}" class="btn btn-sm btn-outline-primary" title="Baixar Novamente">

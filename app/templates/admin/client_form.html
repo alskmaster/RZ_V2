@@ -49,6 +49,26 @@
                     <span class="badge bg-primary me-2">2º</span> Configurações do Tenant
                 </div>
                 <div class="card-body">
+
+                    <!-- NOVO: SLA do Cliente -->
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="sla_contract" class="form-label">Meta de SLA do Cliente (%)</label>
+                            <input
+                                type="number"
+                                id="sla_contract"
+                                name="sla_contract"
+                                class="form-control"
+                                step="0.001"
+                                min="0"
+                                max="100"
+                                placeholder="99.9"
+                                value="{{ ('%.3f' % client.sla_contract).rstrip('0').rstrip('.') if client and client.sla_contract is not none else '99.9' }}"
+                            >
+                            <small class="text-muted">Ex.: 99.9</small>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Grupos de Hosts do Zabbix</label>
                         <div id="zabbix-groups-container">
@@ -111,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const groupsContainer = document.getElementById('zabbix-groups-container');
     const addGroupBtn = document.getElementById('add-group-btn');
     const form = document.getElementById('form-cliente');
+    const slaInput = document.getElementById('sla_contract');
 
     // CSRF token para requisições AJAX e para logs
     const csrfToken = '{{ csrf_token() }}';
@@ -128,7 +149,8 @@ document.addEventListener('DOMContentLoaded', function() {
             action: form.action,
             hasCsrfField: !!form.querySelector('input[name="csrf_token"]'),
             name: document.getElementById('name')?.value || null,
-            zabbix_url: document.getElementById('zabbix_url')?.value || null
+            zabbix_url: document.getElementById('zabbix_url')?.value || null,
+            sla_contract: slaInput ? slaInput.value : null
         });
     });
 

@@ -169,6 +169,17 @@ def add_client():
         zabbix_user = (request.form.get('zabbix_user') or '').strip()
         zabbix_password = request.form.get('zabbix_password')  # não logar
 
+        # --- NOVO: SLA contract ---
+        raw_sla = (request.form.get('sla_contract') or '').strip()
+        sla_value = 99.9
+        if raw_sla:
+            raw_sla = raw_sla.replace(',', '.')
+            try:
+                sla_value = float(raw_sla)
+            except ValueError:
+                sla_value = 99.9
+        _log_debug("Valor SLA recebido no add_client", raw=raw_sla, parsed=sla_value)
+
         _log_debug(
             "POST /client/add recebido",
             method=request.method,
@@ -195,7 +206,8 @@ def add_client():
             name=name,
             zabbix_url=zabbix_url,
             zabbix_user=zabbix_user,
-            zabbix_password=zabbix_password  # Considerar criptografar/secret manager no futuro
+            zabbix_password=zabbix_password,  # Considerar criptografar/secret manager no futuro
+            sla_contract=sla_value
         )
 
         group_ids = [g for g in request.form.getlist('zabbix_groups[]') if g]
@@ -249,13 +261,23 @@ def edit_client(client_id):
         zabbix_user = (request.form.get('zabbix_user') or '').strip()
         zabbix_password = request.form.get('zabbix_password')  # opcional
 
+        # --- NOVO: SLA contract ---
+        raw_sla = (request.form.get('sla_contract') or '').strip()
+        if raw_sla:
+            raw_sla = raw_sla.replace(',', '.')
+            try:
+                client.sla_contract = float(raw_sla)
+            except ValueError:
+                _log_debug("Valor SLA inválido no edit, mantendo atual", raw=raw_sla)
+
         _log_debug(
             "POST /client/edit recebido",
             client_id=client_id,
             method=request.method,
             has_pw=bool(zabbix_password),
             form_keys=sorted(list(request.form.keys())),
-            files=list(request.files.keys())
+            files=list(request.files.keys()),
+            sla=client.sla_contract
         )
 
         if not all([name, zabbix_url, zabbix_user]):

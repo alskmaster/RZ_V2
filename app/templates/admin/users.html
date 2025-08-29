@@ -7,7 +7,7 @@
         <h1 class="h2">Gerenciar Usuários</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ url_for('admin.add_user') }}" class="btn btn-sm btn-primary">
-                <i class="fas fa-plus"></i> Novo Usuário
+                <i class="fas fa-plus me-1"></i> Novo Usuário
             </a>
         </div>
     </div>
@@ -40,21 +40,22 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{{ url_for('admin.vincular_cliente_usuario', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" title="Vincular Clientes">
-                                    <i class="fas fa-link"></i>
-                                </a>
-                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir o usuário {{ user.username }}?');">
-                                    {# Campo oculto CSRF #}
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('admin.vincular_cliente_usuario', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" title="Vincular Clientes">
+                                        <i class="fas fa-link me-1"></i> Vincular
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar">
+                                        <i class="fas fa-edit me-1"></i> Editar
+                                    </a>
+                                    {% if user.id != current_user.id %}
+                                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline form-delete-user" data-user-id="{{ user.id }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="fas fa-trash-alt me-1"></i> Excluir
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -68,4 +69,19 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.form-delete-user').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            const userId = form.getAttribute('data-user-id');
+            if (!confirm('Confirma a exclusão deste usuário?')) {
+                e.preventDefault();
+                console.debug('[users] exclusão cancelada', { userId });
+                return false;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
