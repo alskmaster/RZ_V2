@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 
 from . import main
 from app import db
-from app.models import Client, Report, SystemConfig, User, ReportTemplate
+from app.models import Client, Report, SystemConfig, User, ReportTemplate, MetricKeyProfile  # <-- adicionado MetricKeyProfile
 
 # A importação foi dividida em duas para buscar cada função de seu arquivo de origem correto.
 from app.services import (ReportGenerator, update_status, 
@@ -283,6 +283,26 @@ def get_available_modules(client_id):
         available_modules.append({'type': 'traffic_in', 'name': 'Tráfego de Entrada'})
         available_modules.append({'type': 'traffic_out', 'name': 'Tráfego de Saída'})
     
+    # --------- NOVO: detecção de Wi-Fi (clientcountnumber / perfis wifi_clients) ----------
+    try:
+        wifi_keys = [p.key_string for p in MetricKeyProfile.query
+                     .filter_by(metric_type='wifi_clients', is_active=True)
+                     .order_by(MetricKeyProfile.priority.asc()).all()]
+        if not wifi_keys:
+            wifi_keys = ['clientcountnumber']  # fallback
+    except Exception as e:
+        current_app.logger.warning(f"[get_available_modules] Falha ao consultar MetricKeyProfile para Wi-Fi: {e}")
+        wifi_keys = ['clientcountnumber']
+
+    wifi_found = False
+    for k in wifi_keys:
+        if check_key(k):
+            wifi_found = True
+            break
+    if wifi_found:
+        available_modules.append({'type': 'wifi', 'name': 'Wi-Fi (Utilização por AP/SSID)'})
+    # --------- FIM DO BLOCO NOVO ----------------------------------------------------------
+
     available_modules.append({'type': 'inventory', 'name': 'Inventário de Hosts'})
     available_modules.append({'type': 'html', 'name': 'Texto/HTML Customizado'})
     

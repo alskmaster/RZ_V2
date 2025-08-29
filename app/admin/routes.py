@@ -74,7 +74,12 @@ def _sanitize_url(url: str) -> str:
 class MetricKeyProfileForm(FlaskForm):
     metric_type = SelectField(
         'Tipo de Métrica',
-        choices=[('memory', 'Memória'), ('cpu', 'CPU'), ('disk', 'Disco')],
+        choices=[
+            ('memory', 'Memória'),
+            ('cpu', 'CPU'),
+            ('disk', 'Disco'),
+            ('wifi_clients', 'Wi-Fi (Contagem de Clientes)')  # <-- NOVO
+        ],
         validators=[DataRequired(message="Selecione o tipo de métrica.")]
     )
     key_string = StringField(

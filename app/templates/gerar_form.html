@@ -249,6 +249,59 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Personalização Wi-Fi -->
+<div class="modal fade" id="customizeWifiModal" tabindex="-1" aria-labelledby="customizeWifiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customizeWifiModalLabel">Personalizar Módulo: Wi-Fi (Contagem de Clientes)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="wifiChartType" class="form-label">Gráfico</label>
+                        <select id="wifiChartType" class="form-select">
+                            <option value="bar">Barras por AP (máximo diário)</option>
+                            <option value="line">Linha (agregado global)</option>
+                            <option value="both">Ambos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="wifiTableType" class="form-label">Tabela</label>
+                        <select id="wifiTableType" class="form-select">
+                            <option value="summary">Resumo (mês atual × anterior)</option>
+                            <option value="detailed">Detalhada por AP e dia</option>
+                            <option value="both">Ambas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="wifiHeatmapMode" class="form-label">Heatmap</label>
+                        <select id="wifiHeatmapMode" class="form-select">
+                            <option value="global">Global (média por hora)</option>
+                            <option value="per_ap">Por AP</option>
+                            <option value="both">Ambos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="wifiCapacity" class="form-label">Capacidade/AP</label>
+                        <input type="number" id="wifiCapacity" class="form-control" value="50" min="1" step="1">
+                        <div class="form-text">Usado para marcar APs saturados (p95 ≥ capacidade).</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="wifiMaxCharts" class="form-label">Máx. Gráficos/AP</label>
+                        <input type="number" id="wifiMaxCharts" class="form-control" value="6" min="1" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="saveWifiCustomizationBtn">Salvar Personalização</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

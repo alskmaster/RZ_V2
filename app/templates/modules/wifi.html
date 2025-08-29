@@ -1,0 +1,129 @@
+{# app/templates/modules/wifi.html #}
+<div class="report-module-instance" {% if new_page %}style="page-break-before: always;"{% endif %}>
+  <h2 class="mb-3">{{ title or 'Wi-Fi (Utilização por AP/SSID)' }}</h2>
+
+  {% if data.error %}
+    <div class="alert alert-warning">{{ data.error }}</div>
+  {% endif %}
+
+  {# ===================== KPIs ===================== #}
+  {% if data.kpis %}
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="text-muted small">Pico Global</div>
+          <div class="fs-5 fw-bold">{{ data.kpis.pico_global }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="text-muted small">p95 Global</div>
+          <div class="fs-5 fw-bold">{{ data.kpis.p95_global }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="text-muted small">Total de APs</div>
+          <div class="fs-5 fw-bold">{{ data.kpis.total_aps }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="text-muted small">Capacidade de Referência</div>
+          <div class="fs-5 fw-bold">{{ data.kpis.capacity }}</div>
+          <div class="text-muted small">p/ AP (usada para saturação)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ========== Gráfico de linha agregado (opcional) ========== #}
+  {% if data.line_chart %}
+    <div class="chart-container mb-3" style="page-break-inside: avoid;">
+      <img src="data:image/png;base64,{{ data.line_chart }}" alt="Tendência Global Wi-Fi"
+           style="width:100%;height:auto;">
+    </div>
+  {% endif %}
+
+  {# ========== Gráficos por AP (barras) ========== #}
+  {% if data.charts_ap and data.charts_ap|length > 0 %}
+    <h4 class="mt-2" style="font-size: 11pt; color: #333;">Gráficos por AP (máximo diário)</h4>
+    {% for img in data.charts_ap %}
+      <div class="chart-container mb-3" style="page-break-inside: avoid;">
+        <img src="data:image/png;base64,{{ img }}" alt="Wi-Fi por AP"
+             style="width:100%;height:auto;">
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# ===================== TABELAS ===================== #}
+  {% if data.show_table_summary and data.summary_rows and data.summary_rows|length > 0 %}
+    <h4 class="mt-2" style="font-size: 11pt; color: #333;">Resumo – Soma dos Máximos Diários por AP</h4>
+    <div class="table-responsive mb-3">
+      <table class="table table-sm table-hover align-middle" style="font-size: 9pt;">
+        <thead>
+          <tr>
+            <th>Host</th>
+            <th>AP</th>
+            <th class="text-end">Total (mês atual)</th>
+            <th class="text-end">Total (mês anterior)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in data.summary_rows %}
+          <tr>
+            <td>{{ r.host }}</td>
+            <td>{{ r.ap }}</td>
+            <td class="text-end">{{ r.total_current }}</td>
+            <td class="text-end">{{ r.total_prev }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  {% if data.show_table_detailed and data.detailed_blocks and data.detailed_blocks|length > 0 %}
+    <h4 class="mt-2" style="font-size: 11pt; color: #333;">Detalhamento por AP (Máximo diário)</h4>
+    {% for block in data.detailed_blocks %}
+      <h6 class="mt-2">{{ block.host }} – {{ block.ap }}</h6>
+      <div class="table-responsive mb-2">
+        <table class="table table-sm" style="font-size: 9pt;">
+          <thead><tr><th>Dia</th><th class="text-end">Máximo diário</th></tr></thead>
+          <tbody>
+            {% for row in block.rows %}
+              <tr><td>{{ row.date }}</td><td class="text-end">{{ row.max_daily }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# ===================== HEATMAPS ===================== #}
+  {% if data.heatmap_global %}
+    <h4 class="mt-2" style="font-size: 11pt; color: #333;">Heatmap Global – Média por Hora</h4>
+    <div class="chart-container mb-3" style="page-break-inside: avoid;">
+      <img src="data:image/png;base64,{{ data.heatmap_global }}" alt="Heatmap Global"
+           style="width:100%;height:auto;">
+    </div>
+  {% endif %}
+
+  {% if data.heatmap_per_ap and data.heatmap_per_ap|length > 0 %}
+    <h4 class="mt-2" style="font-size: 11pt; color: #333;">Heatmap por AP (média por hora)</h4>
+    {% for img in data.heatmap_per_ap %}
+      <div class="chart-container mb-2" style="page-break-inside: avoid;">
+        <img src="data:image/png;base64,{{ img }}" alt="Heatmap por AP"
+             style="width:100%;height:auto;">
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>

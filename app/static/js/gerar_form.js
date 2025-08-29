@@ -18,6 +18,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveTemplateBtn = document.getElementById('saveTemplateBtn');
     const templateNameInput = document.getElementById('templateNameInput');
 
+    // --- ELEMENTOS DO MODAL WIFI ---
+    const wifiModalEl = document.getElementById('customizeWifiModal');
+    const wifiModal = wifiModalEl ? new bootstrap.Modal(wifiModalEl) : null;
+    const wifiChartType = document.getElementById('wifiChartType');
+    const wifiTableType = document.getElementById('wifiTableType');
+    const wifiHeatmapMode = document.getElementById('wifiHeatmapMode');
+    const wifiCapacity = document.getElementById('wifiCapacity');
+    const wifiMaxCharts = document.getElementById('wifiMaxCharts');
+    const saveWifiCustomizationBtn = document.getElementById('saveWifiCustomizationBtn');
+
     // --- ESTADO DA APLICAÇÃO ---
     let reportLayout = [];
     let availableModules = [];
@@ -88,7 +98,36 @@ document.addEventListener('DOMContentLoaded', function () {
                     chart_type: this.elements.chartType.value
                 };
             }
+        },
+        // ----------------- NOVO: CUSTOMIZER DO WI-FI -----------------
+        'wifi': {
+            modal: wifiModal,
+            elements: {
+                chartType: wifiChartType,
+                tableType: wifiTableType,
+                heatmap: wifiHeatmapMode,
+                capacity: wifiCapacity,
+                maxCharts: wifiMaxCharts,
+                saveBtn: saveWifiCustomizationBtn
+            },
+            load: function(options) {
+                this.elements.chartType.value = (options.chart || 'bar');
+                this.elements.tableType.value = (options.table || 'both');
+                this.elements.heatmap.value = (options.heatmap || 'global');
+                this.elements.capacity.value = (options.capacity_per_ap != null ? options.capacity_per_ap : 50);
+                this.elements.maxCharts.value = (options.max_charts != null ? options.max_charts : 6);
+            },
+            save: function() {
+                return {
+                    chart: this.elements.chartType.value,
+                    table: this.elements.tableType.value,
+                    heatmap: this.elements.heatmap.value,
+                    capacity_per_ap: parseFloat(this.elements.capacity.value),
+                    max_charts: parseInt(this.elements.maxCharts.value, 10)
+                };
+            }
         }
+        // -------------------------------------------------------------
     };
     // ===================================================================================
 
@@ -240,16 +279,17 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (targetBtn.classList.contains('customize-module-btn')) {
             currentModuleToCustomize = module;
             const customizer = moduleCustomizers[module.type];
-            if (customizer) {
+            if (customizer && customizer.modal) {
                 customizer.load(module.custom_options || {});
                 customizer.modal.show();
             }
         }
     });
 
+    // Salvar de cada customizer
     Object.keys(moduleCustomizers).forEach(moduleType => {
         const customizer = moduleCustomizers[moduleType];
-        if (customizer.elements.saveBtn) {
+        if (customizer.elements && customizer.elements.saveBtn) {
             customizer.elements.saveBtn.addEventListener('click', () => {
                 if (!currentModuleToCustomize) return;
                 currentModuleToCustomize.custom_options = customizer.save();
@@ -259,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Regras específicas de SLA (já existentes)
     if (moduleCustomizers.sla) {
         const slaElements = moduleCustomizers.sla.elements;
         slaElements.comparePrevMonth.addEventListener('change', () => {
@@ -272,6 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Carregar template salvo
     loadTemplateBtn.addEventListener('click', () => {
         if (templateSelector.value) {
             try {
@@ -283,6 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Submissão do form → gerar relatório
     reportForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (reportLayout.length === 0) {
@@ -347,6 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Drag & drop na lista
     new Sortable(layoutList, {
         animation: 150,
         handle: '.bi-grip-vertical',

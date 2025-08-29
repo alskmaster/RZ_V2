@@ -28,6 +28,7 @@ from .collectors.kpi_collector import KpiCollector
 from .collectors.top_hosts_collector import TopHostsCollector
 from .collectors.top_problems_collector import TopProblemsCollector
 from .collectors.stress_collector import StressCollector
+from .collectors.wifi_collector import WiFiCollector   # <-- NOVO
 
 # --- Registro de Plugins ---
 COLLECTOR_MAP = {
@@ -45,6 +46,7 @@ COLLECTOR_MAP = {
     'top_hosts': TopHostsCollector,
     'top_problems': TopProblemsCollector,
     'stress': StressCollector,
+    'wifi': WiFiCollector,    # <-- NOVO
 }
 
 # --- Gerenciador de Tarefas e Auditoria ---
