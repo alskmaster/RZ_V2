@@ -10,96 +10,98 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin.customize') }}" enctype="multipart/form-data">
-                
-                <h5 class="mb-3">Configurações Gerais</h5>
-                <div class="mb-3">
-                    <label class="form-label">Nome da Empresa</label>
-                    <input type="text" class="form-control" name="company_name" value="{{ g.sys_config.company_name }}" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Texto do Rodapé do Relatório</label>
-                    <input type="text" class="form-control" name="footer_text" value="{{ g.sys_config.footer_text }}" required>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Logo para Fundos Escuros (Sidebar)</label>
-                        <input type="file" class="form-control" name="logo_dark" accept=".png,.jpg,.jpeg">
-                        {% if g.sys_config.logo_dark_bg_path %}
-                        <small class="form-text text-muted mt-2 d-block">Atual: 
-                            <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_dark_bg_path) }}" height="30" class="bg-dark p-1 rounded">
-                        </small>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Logo para Fundos Claros (Relatório)</label>
-                        <input type="file" class="form-control" name="logo_light" accept=".png,.jpg,.jpeg">
-                         {% if g.sys_config.logo_light_bg_path %}
-                        <small class="form-text text-muted mt-2 d-block">Atual: 
-                            <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_light_bg_path) }}" height="30" class="bg-light border p-1 rounded">
-                        </small>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Mídia da Página de Login (Imagem/Vídeo)</label>
-                    <input type="file" class="form-control" name="login_media" accept=".png,.jpg,.jpeg,.mp4">
-                    <small class="form-text text-muted">Use vídeos curtos e otimizados para web.</small>
-                </div>
+                    {# Campo oculto CSRF obrigatório #}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
-                <hr class="my-4">
+                    <h5 class="mb-3">Configurações Gerais</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Empresa</label>
+                        <input type="text" class="form-control" name="company_name" value="{{ g.sys_config.company_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Texto do Rodapé do Relatório</label>
+                        <input type="text" class="form-control" name="footer_text" value="{{ g.sys_config.footer_text }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Logo para Fundos Escuros (Sidebar)</label>
+                            <input type="file" class="form-control" name="logo_dark" accept=".png,.jpg,.jpeg">
+                            {% if g.sys_config.logo_dark_bg_path %}
+                            <small class="form-text text-muted mt-2 d-block">Atual: 
+                                <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_dark_bg_path) }}" height="30" class="bg-dark p-1 rounded">
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Logo para Fundos Claros (Relatório)</label>
+                            <input type="file" class="form-control" name="logo_light" accept=".png,.jpg,.jpeg">
+                             {% if g.sys_config.logo_light_bg_path %}
+                            <small class="form-text text-muted mt-2 d-block">Atual: 
+                                <img src="{{ url_for('main.uploaded_file', filename=g.sys_config.logo_light_bg_path) }}" height="30" class="bg-light border p-1 rounded">
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mídia da Página de Login (Imagem/Vídeo)</label>
+                        <input type="file" class="form-control" name="login_media" accept=".png,.jpg,.jpeg,.mp4">
+                        <small class="form-text text-muted">Use vídeos curtos e otimizados para web.</small>
+                    </div>
 
-                <h5 class="mb-3">Cores e Layout</h5>
-                 <div class="mb-3">
-                    <label for="color_scheme_select" class="form-label">Preset de Cores</label>
-                    <select id="color_scheme_select" name="color_scheme" class="form-select">
-                        <option value="light" {% if g.sys_config.color_scheme == 'light' %}selected{% endif %}>Claro (Padrão)</option>
-                        <option value="dark" {% if g.sys_config.color_scheme == 'dark' %}selected{% endif %}>Escuro</option>
-                        <option value="custom" {% if g.sys_config.color_scheme == 'custom' %}selected{% endif %}>Customizado</option>
-                    </select>
-                </div>
-                <div class="row">
-                    <div class="col-md-3">
-                        <label for="primary_color" class="form-label">Cor Primária</label>
-                        <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ g.sys_config.primary_color }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="secondary_color" class="form-label">Cor Secundária</label>
-                        <input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" value="{{ g.sys_config.secondary_color }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="color_bg_main" class="form-label">Fundo Principal</label>
-                        <input type="color" class="form-control form-control-color" id="color_bg_main" name="color_bg_main" value="{{ g.sys_config.color_bg_main }}">
-                    </div>
-                     <div class="col-md-3">
-                        <label for="color_bg_card" class="form-label">Fundo dos Cards</label>
-                        <input type="color" class="form-control form-control-color" id="color_bg_card" name="color_bg_card" value="{{ g.sys_config.color_bg_card }}">
-                    </div>
-                     <div class="col-md-3 mt-3">
-                        <label for="color_text_light" class="form-label">Cor do Texto</label>
-                        <input type="color" class="form-control form-control-color" id="color_text_light" name="color_text_light" value="{{ g.sys_config.color_text_light }}">
-                    </div>
-                    <div class="col-md-3 mt-3">
-                        <label for="color_border" class="form-label">Cor das Bordas</label>
-                        <input type="color" class="form-control form-control-color" id="color_border" name="color_border" value="{{ g.sys_config.color_border }}">
-                    </div>
-                </div>
+                    <hr class="my-4">
 
-                <hr class="my-4">
-                <h5 class="mb-3">Relatórios</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Capa Padrão (PDF)</label>
-                        <input type="file" class="form-control" name="report_cover" accept=".pdf">
+                    <h5 class="mb-3">Cores e Layout</h5>
+                     <div class="mb-3">
+                        <label for="color_scheme_select" class="form-label">Preset de Cores</label>
+                        <select id="color_scheme_select" name="color_scheme" class="form-select">
+                            <option value="light" {% if g.sys_config.color_scheme == 'light' %}selected{% endif %}>Claro (Padrão)</option>
+                            <option value="dark" {% if g.sys_config.color_scheme == 'dark' %}selected{% endif %}>Escuro</option>
+                            <option value="custom" {% if g.sys_config.color_scheme == 'custom' %}selected{% endif %}>Customizado</option>
+                        </select>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Página Final Padrão (PDF)</label>
-                        <input type="file" class="form-control" name="report_final_page" accept=".pdf">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="primary_color" class="form-label">Cor Primária</label>
+                            <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ g.sys_config.primary_color }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="secondary_color" class="form-label">Cor Secundária</label>
+                            <input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" value="{{ g.sys_config.secondary_color }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="color_bg_main" class="form-label">Fundo Principal</label>
+                            <input type="color" class="form-control form-control-color" id="color_bg_main" name="color_bg_main" value="{{ g.sys_config.color_bg_main }}">
+                        </div>
+                         <div class="col-md-3">
+                            <label for="color_bg_card" class="form-label">Fundo dos Cards</label>
+                            <input type="color" class="form-control form-control-color" id="color_bg_card" name="color_bg_card" value="{{ g.sys_config.color_bg_card }}">
+                        </div>
+                         <div class="col-md-3 mt-3">
+                            <label for="color_text_light" class="form-label">Cor do Texto</label>
+                            <input type="color" class="form-control form-control-color" id="color_text_light" name="color_text_light" value="{{ g.sys_config.color_text_light }}">
+                        </div>
+                        <div class="col-md-3 mt-3">
+                            <label for="color_border" class="form-label">Cor das Bordas</label>
+                            <input type="color" class="form-control form-control-color" id="color_border" name="color_border" value="{{ g.sys_config.color_border }}">
+                        </div>
                     </div>
-                </div>
 
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                </div>
+                    <hr class="my-4">
+                    <h5 class="mb-3">Relatórios</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Capa Padrão (PDF)</label>
+                            <input type="file" class="form-control" name="report_cover" accept=".pdf">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Página Final Padrão (PDF)</label>
+                            <input type="file" class="form-control" name="report_final_page" accept=".pdf">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
                 </form>
             </div>
         </div>

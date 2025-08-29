@@ -7,7 +7,7 @@ from datetime import timedelta
 from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
@@ -27,7 +27,6 @@ login_manager.login_message_category = "info"
 @login_manager.user_loader
 def load_user(user_id):
     from .models import User
-    # get() é mais eficiente nas versões recentes / evita depreciação
     return db.session.get(User, int(user_id))
 
 
@@ -44,34 +43,25 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # --- Hardening e defaults sensatos (não invadem config existente) ---
-    # Aviso útil se SECRET_KEY não estiver definido (impacta CSRF/sessões)
+    # --- Hardening e defaults sensatos ---
     if not app.config.get("SECRET_KEY"):
         app.logger.warning("[boot] SECRET_KEY ausente! CSRF/sessões podem falhar.")
 
-    # Cookies e sessão
     app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
-    # Em produção atrás de HTTPS, considere forçar Secure:
     if app.config.get("PREFERRED_URL_SCHEME", "").lower() == "https":
         app.config.setdefault("SESSION_COOKIE_SECURE", True)
     app.config.setdefault("PERMANENT_SESSION_LIFETIME", timedelta(hours=8))
 
-    # Uploads e limites
-    app.config.setdefault("MAX_CONTENT_LENGTH", 32 * 1024 * 1024)  # 32 MB por request
+    app.config.setdefault("MAX_CONTENT_LENGTH", 32 * 1024 * 1024)
     app.config.setdefault("UPLOAD_FOLDER", os.path.join(os.getcwd(), "uploads"))
     app.config.setdefault("GENERATED_REPORTS_FOLDER", os.path.join(os.getcwd(), "generated_reports"))
 
-    # CSRF (mantendo sua escolha atual; apenas reforçando opções)
-    app.config.setdefault("WTF_CSRF_TIME_LIMIT", None)  # tokens sem expiração rígida
-    # app.config.setdefault("WTF_CSRF_CHECK_DEFAULT", True)  # padrão já é True
+    app.config.setdefault("WTF_CSRF_TIME_LIMIT", None)
 
-    # Dev experience
     if app.config.get("DEBUG"):
         app.config.setdefault("TEMPLATES_AUTO_RELOAD", True)
 
-    # --- Middlewares úteis ---
-    # Corrige headers de proxy (X-Forwarded-For/Proto/Host), importante atrás de Nginx/ELB
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # --- Inicializa extensões ---
@@ -92,13 +82,17 @@ def create_app(config_class=Config):
     # --- Filtros Jinja ---
     app.jinja_env.filters['text_color_for_bg'] = get_text_color_for_bg
 
-    # --- Hooks de observabilidade (debug por função/rota) ---
+    # --- Context processor para CSRF ---
+    @app.context_processor
+    def inject_csrf_token():
+        # Permite usar {{ csrf_token() }} em qualquer template
+        return dict(csrf_token=lambda: generate_csrf())
+
+    # --- Hooks de observabilidade ---
     @app.before_request
     def _obs_before():
-        # request-id, início, tamanhos de payload
         _ensure_request_id()
         g._t0 = time.perf_counter()
-        # Nunca logar senha/cookies/headers sensíveis; aqui só metadados
         try:
             clen = request.content_length or 0
         except Exception:
@@ -115,7 +109,6 @@ def create_app(config_class=Config):
 
     @app.after_request
     def _obs_after(response):
-        # latência e status
         try:
             dt_ms = int((time.perf_counter() - getattr(g, "_t0", time.perf_counter())) * 1000)
         except Exception:
@@ -129,13 +122,11 @@ def create_app(config_class=Config):
             dt_ms,
             getattr(g, "request_id", "-")
         )
-        # Segurança básica de headers (pode ajustar conforme front)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("X-XSS-Protection", "1; mode=block")
         return response
 
-    # Handlers de erro com logs detalhados
     @app.errorhandler(400)
     def _err_400(e):
         current_app.logger.warning("ERR400 | path=%s | rid=%s | %s", request.path, getattr(g, "request_id", "-"), e)
@@ -161,10 +152,9 @@ def create_app(config_class=Config):
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         os.makedirs(app.config['GENERATED_REPORTS_FOLDER'], exist_ok=True)
 
-        from . import models  # evita import circular
+        from . import models
         db.create_all()
 
-        # Seeds idempotentes (sem duplicar)
         if not models.Role.query.first():
             db.session.add_all([
                 models.Role(name='super_admin'),

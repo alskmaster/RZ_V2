@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    {# Token CSRF também disponível para JS/AJAX, se necessário #}
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
+
     <style>
         :root {
             --primary-color: {{ g.sys_config.primary_color | default('#2c3e50') }};
@@ -95,19 +99,40 @@
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                        </div>
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
 
-                <form method="POST">
+                <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                    {# Campo oculto CSRF — essencial para POST #}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
                     <div class="mb-3">
                         <label for="username" class="form-label">Usuário</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="username"
+                            name="username"
+                            required
+                            autocomplete="username"
+                            inputmode="text"
+                        >
                     </div>
                     <div class="mb-4">
                         <label for="password" class="form-label">Senha</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            name="password"
+                            required
+                            autocomplete="current-password"
+                        >
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Entrar</button>

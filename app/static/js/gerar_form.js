@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let reportLayout = [];
     let availableModules = [];
     let currentModuleToCustomize = null;
+    let activePoll = null; // controle para polling de status
 
     // ===================================================================================
     // --- CENTRO DE COMANDO DE CUSTOMIZAÇÃO DE MÓDULOS ---
@@ -91,7 +92,20 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     // ===================================================================================
 
-    // --- FUNÇÕES ---
+    // --- FUNÇÕES AUXILIARES ---
+
+    function logDebug(event, details = {}) {
+        console.debug(`[gerar_form] ${event}`, details);
+        window.__gerarFormDebug = window.__gerarFormDebug || [];
+        window.__gerarFormDebug.push({ ts: new Date().toISOString(), event, details });
+    }
+
+    function safeUUID() {
+        if (window.crypto && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'id-' + Math.random().toString(36).substring(2, 11);
+    }
 
     function renderLayoutList() {
         layoutList.innerHTML = '';
@@ -140,42 +154,30 @@ document.addEventListener('DOMContentLoaded', function () {
         addModuleBtn.disabled = true;
 
         const url = URLS.get_modules.replace('0', String(clientId));
-        console.debug('[gerar_form] GET módulos', { url });
+        logDebug('fetchClientData.start', { url });
 
         try {
             const response = await fetch(url, { headers: { 'Accept': 'application/json' }});
-            const status = response.status;
-            let rawText = '';
-            let data = null;
-
             if (!response.ok) {
-                try { rawText = await response.text(); } catch (_) {}
-                console.error('[gerar_form] Resposta não-OK ao buscar módulos', { status, rawText });
-                window.__reportModulesDebug = { url, status, rawText };
+                const rawText = await response.text().catch(() => '');
+                logDebug('fetchClientData.error', { status: response.status, rawText });
                 moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
                 return;
             }
 
-            // Tenta parsear JSON com tolerância
-            try {
-                data = await response.json();
-            } catch (jsonErr) {
-                rawText = rawText || (await response.text().catch(() => ''));
-                console.error('[gerar_form] Falha ao parsear JSON de módulos', { status, jsonErr, rawText });
-                window.__reportModulesDebug = { url, status, jsonErr: String(jsonErr), rawText };
+            const data = await response.json().catch(err => {
+                logDebug('fetchClientData.jsonError', { err: String(err) });
+                return null;
+            });
+
+            if (!data || data.error) {
+                logDebug('fetchClientData.backendError', { error: data?.error });
                 moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
                 return;
             }
 
-            if (data && data.error) {
-                console.error('[gerar_form] Backend retornou erro de módulos', { status, error: data.error });
-                window.__reportModulesDebug = { url, status, error: data.error };
-                moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
-                return;
-            }
-
-            availableModules = (data && data.available_modules) || [];
-            console.debug('[gerar_form] Módulos disponíveis', { count: availableModules.length, items: availableModules });
+            availableModules = Array.isArray(data.available_modules) ? data.available_modules : [];
+            logDebug('fetchClientData.success', { count: availableModules.length });
 
             moduleTypeSelect.innerHTML = '';
             if (availableModules.length > 0) {
@@ -186,8 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 moduleTypeSelect.innerHTML = '<option>Nenhum módulo disponível</option>';
             }
         } catch (error) {
-            console.error('[gerar_form] Erro ao carregar módulos (network/JS):', error);
-            window.__reportModulesDebug = { url, exception: String(error) };
+            logDebug('fetchClientData.exception', { error: String(error) });
             moduleTypeSelect.innerHTML = '<option>Erro ao carregar módulos</option>';
         }
     }
@@ -202,26 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
         generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Gerar Relatório';
     }
 
-    // --- LÓGICA DE EVENTOS ---
-
-    function handleCustomizeClick(module) {
-        currentModuleToCustomize = module;
-        const customizer = moduleCustomizers[module.type];
-        if (customizer) {
-            customizer.load(module.custom_options || {});
-            customizer.modal.show();
-        }
-    }
-
-    function handleSaveCustomization(moduleType) {
-        if (!currentModuleToCustomize) return;
-        const customizer = moduleCustomizers[moduleType];
-        if (customizer) {
-            currentModuleToCustomize.custom_options = customizer.save();
-            renderLayoutList();
-            customizer.modal.hide();
-        }
-    }
+    // --- EVENTOS ---
 
     clientSelect.addEventListener('change', () => {
         fetchClientData(clientSelect.value);
@@ -233,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const moduleType = moduleTypeSelect.value;
         if (!moduleType) return;
         reportLayout.push({
-            id: crypto.randomUUID(),
+            id: safeUUID(),
             type: moduleType,
             title: moduleTitleInput.value.trim(),
             newPage: newPageCheck.checked,
@@ -256,14 +238,24 @@ document.addEventListener('DOMContentLoaded', function () {
             reportLayout = reportLayout.filter(m => m.id !== moduleId);
             renderLayoutList();
         } else if (targetBtn.classList.contains('customize-module-btn')) {
-            handleCustomizeClick(module);
+            currentModuleToCustomize = module;
+            const customizer = moduleCustomizers[module.type];
+            if (customizer) {
+                customizer.load(module.custom_options || {});
+                customizer.modal.show();
+            }
         }
     });
 
     Object.keys(moduleCustomizers).forEach(moduleType => {
         const customizer = moduleCustomizers[moduleType];
         if (customizer.elements.saveBtn) {
-            customizer.elements.saveBtn.addEventListener('click', () => handleSaveCustomization(moduleType));
+            customizer.elements.saveBtn.addEventListener('click', () => {
+                if (!currentModuleToCustomize) return;
+                currentModuleToCustomize.custom_options = customizer.save();
+                renderLayoutList();
+                customizer.modal.hide();
+            });
         }
     });
 
@@ -282,15 +274,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadTemplateBtn.addEventListener('click', () => {
         if (templateSelector.value) {
-            reportLayout = JSON.parse(templateSelector.value);
-            renderLayoutList();
+            try {
+                reportLayout = JSON.parse(templateSelector.value);
+                renderLayoutList();
+            } catch (e) {
+                logDebug('loadTemplateBtn.jsonError', { error: String(e) });
+            }
         }
     });
 
     reportForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (reportLayout.length === 0) {
-            alert('Por favor, adicione ao menos um módulo ao layout do relatório.');
+            statusArea.style.display = 'block';
+            statusArea.className = 'alert alert-warning mt-4';
+            statusMessage.textContent = '⚠️ Adicione ao menos um módulo antes de gerar o relatório.';
             return;
         }
 
@@ -302,16 +300,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData(reportForm);
 
         try {
-            const response = await fetch(URLS.gerar_relatorio, {
-                method: 'POST',
-                body: formData
-            });
+            const response = await fetch(URLS.gerar_relatorio, { method: 'POST', body: formData });
             if (!response.ok) throw new Error(`Erro no servidor: ${response.status} ${response.statusText}`);
             const data = await response.json();
             const taskId = data.task_id;
 
             if (taskId) {
-                const pollInterval = setInterval(async () => {
+                activePoll = setInterval(async () => {
                     try {
                         const statusResponse = await fetch(URLS.report_status.replace('0', taskId));
                         if (!statusResponse.ok) throw new Error('Falha ao verificar status');
@@ -320,20 +315,21 @@ document.addEventListener('DOMContentLoaded', function () {
                         statusMessage.textContent = statusData.status || 'Aguardando...';
 
                         if (statusData.status === 'Concluído') {
-                            clearInterval(pollInterval);
-                            statusMessage.textContent = 'Relatório gerado com sucesso!';
+                            clearInterval(activePoll);
+                            statusMessage.textContent = '✅ Relatório gerado com sucesso!';
                             downloadLink.href = URLS.download_report.replace('0', taskId);
                             downloadLink.classList.remove('disabled');
                             generateBtn.disabled = false;
                             generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Gerar Novo Relatório';
                         } else if (statusData.status && statusData.status.startsWith('Erro:')) {
-                            clearInterval(pollInterval);
+                            clearInterval(activePoll);
                             statusArea.className = 'alert alert-danger mt-4';
                             generateBtn.disabled = false;
                             generateBtn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Tentar Novamente';
                         }
                     } catch (pollError) {
-                        clearInterval(pollInterval);
+                        clearInterval(activePoll);
+                        logDebug('poll.error', { error: String(pollError) });
                         statusMessage.textContent = `Erro ao consultar status: ${pollError.message}`;
                         statusArea.className = 'alert alert-danger mt-4';
                         generateBtn.disabled = false;
@@ -343,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else { throw new Error("Não foi possível iniciar a tarefa."); }
 
         } catch (error) {
-            console.error("Erro na submissão:", error);
+            logDebug('submit.error', { error: String(error) });
             statusMessage.textContent = `Erro: ${error.message}`;
             statusArea.className = 'alert alert-danger mt-4';
             generateBtn.disabled = false;

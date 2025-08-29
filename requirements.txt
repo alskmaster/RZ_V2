@@ -1,13 +1,20 @@
-Flask
-Flask-SQLAlchemy
-Flask-Login
-Flask-APScheduler
-Flask-Mail
-Flask-WTF
-python-dotenv
-requests
-pandas
-matplotlib
-xhtml2pdf
-PyPDF2
-imgkit
+# --- Core ---
+Flask                     # Framework web (LTS estável)
+Flask-SQLAlchemy          # ORM com SQLAlchemy 2.x
+Flask-Login               # Autenticação de usuários
+Flask-APScheduler         # Agendador de jobs
+Flask-Mail                # Envio de emails
+Flask-WTF                 # Forms + CSRF
+python-dotenv             # Carregar variáveis de ambiente
+
+# --- HTTP & Utils ---
+requests                  # Requisições HTTP (mantido pela PSF)
+
+# --- Data & Reports ---
+pandas                    # Manipulação de dados
+matplotlib                # Gráficos
+
+# --- PDF/Relatórios ---
+xhtml2pdf                 # HTML -> PDF (alternativa: WeasyPrint se migrar)
+pypdf                     # Fork ativo do PyPDF2
+imgkit                    # Wrapper p/ wkhtmltoimage (avaliar alternativas no futuro)

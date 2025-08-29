@@ -1,4 +1,3 @@
-# config.py
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -36,26 +35,25 @@ class Config:
     """Configuração base (produção por padrão)."""
 
     # --- Segurança básica / sessão ---
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "mude-esta-chave-secreta-em-producao-agora"
-    # Cookies de sessão — valores finais podem ser reforçados em app/__init__.py
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError("❌ SECRET_KEY não definido! Configure no .env antes de rodar em produção.")
+
     SESSION_COOKIE_HTTPONLY = _bool(os.getenv("SESSION_COOKIE_HTTPONLY"), True)
     SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
-    SESSION_COOKIE_SECURE = _bool(os.getenv("SESSION_COOKIE_SECURE"), False)  # ative em HTTPS
+    SESSION_COOKIE_SECURE = _bool(os.getenv("SESSION_COOKIE_SECURE"), True)  # produção: sempre HTTPS
 
     # --- Flask-WTF / CSRF ---
     WTF_CSRF_ENABLED = _bool(os.getenv("WTF_CSRF_ENABLED"), True)
-    WTF_CSRF_TIME_LIMIT = None  # não expira rigidamente; tokens trocados a cada request
+    WTF_CSRF_TIME_LIMIT = None  # tokens renovados a cada request
     # Caso use header personalizado, mantenha integração no front (X-CSRFToken)
 
     # --- Banco de Dados ---
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Engine tuning para alto volume (ajuste conforme seu banco)
     SQLALCHEMY_ENGINE_OPTIONS = {
-        # pool_pre_ping evita quedas por conexões mortas
         "pool_pre_ping": True,
-        # tamanhos/reciclagem padrão; ajuste por ambiente
         "pool_size": _int(os.getenv("DB_POOL_SIZE"), 10),
         "max_overflow": _int(os.getenv("DB_MAX_OVERFLOW"), 20),
         "pool_recycle": _int(os.getenv("DB_POOL_RECYCLE"), 1800),  # 30 min
@@ -73,26 +71,27 @@ class Config:
     )
     MAX_CONTENT_LENGTH = _int(os.getenv("MAX_CONTENT_LENGTH"), 32 * 1024 * 1024)  # 32 MB
 
-    # --- Zabbix (padrões lidos do .env; token só para debug/hotfix) ---
+    # --- Zabbix ---
     ZABBIX_URL = os.getenv("ZABBIX_URL")
     ZABBIX_USER = os.getenv("ZABBIX_USER")
-    ZABBIX_PASSWORD = os.getenv("ZABBIX_PASSWORD")
-    ZABBIX_TOKEN = os.getenv("ZABBIX_TOKEN")  # opcional (debug)
+    ZABBIX_PASSWORD = os.getenv("ZABBIX_PASSWORD")  # ⚠ nunca logar
+    ZABBIX_TOKEN = os.getenv("ZABBIX_TOKEN")  # opcional (debug apenas)
 
     # --- Superadmin ---
-    SUPERADMIN_PASSWORD = os.getenv("SUPERADMIN_PASSWORD") or "admin123"
+    SUPERADMIN_PASSWORD = os.getenv("SUPERADMIN_PASSWORD")
+    if not SUPERADMIN_PASSWORD or SUPERADMIN_PASSWORD == "admin123":
+        raise RuntimeError("❌ SUPERADMIN_PASSWORD inválido. Defina no .env com valor forte.")
 
-    # --- wkhtmltoimage (relatórios/prints) ---
-    WKHTMLTOIMAGE_PATH = os.getenv("WKHTMLTOIMAGE_PATH")  # deixar vazio -> PATH do SO
+    # --- wkhtmltoimage ---
+    WKHTMLTOIMAGE_PATH = os.getenv("WKHTMLTOIMAGE_PATH")  # se vazio, usa PATH do SO
 
     # --- Logging / observabilidade ---
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")  # INFO/DEBUG/WARNING/ERROR
-    LOG_JSON = _bool(os.getenv("LOG_JSON"), True)  # preferir JSON em produção
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LOG_JSON = _bool(os.getenv("LOG_JSON"), True)
 
     # --- Proxy / URL building ---
-    # Se estiver atrás de proxy/ingress com HTTPS, isso ajuda a gerar URLs corretas
-    PREFERRED_URL_SCHEME = os.getenv("PREFERRED_URL_SCHEME", "https" if SESSION_COOKIE_SECURE else "http")
-    SERVER_NAME = os.getenv("SERVER_NAME")  # ex.: "app.exemplo.com" (defina se necessário)
+    PREFERRED_URL_SCHEME = os.getenv("PREFERRED_URL_SCHEME", "https")
+    SERVER_NAME = os.getenv("SERVER_NAME")  # ex.: "app.exemplo.com"
 
     # --- Flags de ambiente ---
     DEBUG = _bool(os.getenv("DEBUG"), False)
@@ -102,7 +101,6 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     LOG_LEVEL = "DEBUG"
-    # Em dev normalmente não usamos cookie secure
     SESSION_COOKIE_SECURE = False
     PREFERRED_URL_SCHEME = "http"
 
@@ -110,12 +108,10 @@ class DevelopmentConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
-    # Em testes, limite de upload reduzido acelera execuções e falhas
     MAX_CONTENT_LENGTH = 8 * 1024 * 1024
-    LOG_JSON = False  # logs legíveis durante testes locais
+    LOG_JSON = False
 
 
-# Export de mapeamento opcional para factory escolher por env
 CONFIG_MAP = {
     "development": DevelopmentConfig,
     "testing": TestingConfig,
